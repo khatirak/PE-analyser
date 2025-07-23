@@ -151,6 +151,9 @@ def get_revenue_data():
         date_range_end = request.args.get('date_range_end', '')
         quarter_range_start = request.args.get('quarter_range_start', '')
         quarter_range_end = request.args.get('quarter_range_end', '')
+        
+        print(f"Received quarter range parameters: start='{quarter_range_start}', end='{quarter_range_end}'")
+        print(f"All request args: {dict(request.args)}")
         fiscal_year_range_start = request.args.get('fiscal_year_range_start', '')
         fiscal_year_range_end = request.args.get('fiscal_year_range_end', '')
         
@@ -167,6 +170,8 @@ def get_revenue_data():
         
         print(f"=== REVENUE DATA DEBUG ===")
         print(f"View type requested: {view_type}")
+        print(f"Current view type: {view_type}")
+        print(f"Will apply quarter filtering: {view_type == 'quarter'}")
         print(f"Total data rows: {len(current_data)}")
         print(f"Available metrics: {current_data['Metric'].unique()}")
         print(f"Available columns: {current_data.columns.tolist()}")
@@ -193,14 +198,20 @@ def get_revenue_data():
         print(f"Selected pharmacies: {selected_pharmacies}")
         print(f"Acquisition filter enabled: {acquisition_filter}")
         
-        if view_type == 'month':
-            return _create_monthly_chart_data_app(revenue_data, date_range_start, date_range_end)
-        elif view_type == 'fiscal_year':
-            return _create_fiscal_year_chart_data_app(revenue_data, fiscal_year_range_start, fiscal_year_range_end)
-        elif view_type == 'quarter':
-            return _create_quarter_chart_data_app(revenue_data, quarter_range_start, quarter_range_end)
-        else:
-            return jsonify({'error': 'Invalid view type'}), 400
+        try:
+            if view_type == 'month':
+                return _create_monthly_chart_data_app(revenue_data, date_range_start, date_range_end)
+            elif view_type == 'fiscal_year':
+                return _create_fiscal_year_chart_data_app(revenue_data, fiscal_year_range_start, fiscal_year_range_end)
+            elif view_type == 'quarter':
+                return _create_quarter_chart_data_app(revenue_data, quarter_range_start, quarter_range_end)
+            else:
+                return jsonify({'error': 'Invalid view type'}), 400
+        except Exception as e:
+            print(f"Error in chart data creation: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'Error creating chart data: {str(e)}'}), 400
         
     except Exception as e:
         return jsonify({'error': f'Error getting revenue data: {str(e)}'}), 400
@@ -346,7 +357,10 @@ def _create_fiscal_year_chart_data_app(revenue_data, fiscal_year_range_start='',
     })
 
 def _create_quarter_chart_data_app(revenue_data, quarter_range_start='', quarter_range_end=''):
+    print(f"=== QUARTER CHART DATA FUNCTION CALLED ===")
     print(f"Creating quarter chart data with {len(revenue_data)} rows")
+    print(f"quarter_range_start: '{quarter_range_start}'")
+    print(f"quarter_range_end: '{quarter_range_end}'")
     print("Sample data:", revenue_data.head() if not revenue_data.empty else "No data")
     print("Columns in revenue_data:", revenue_data.columns.tolist())
     
@@ -371,45 +385,87 @@ def _create_quarter_chart_data_app(revenue_data, quarter_range_start='', quarter
     quarter_data = revenue_data.groupby(['Fiscal_Year', 'Quarter', 'Pharmacy'])['Value'].sum().reset_index()
     quarter_data = quarter_data.sort_values(['Fiscal_Year', 'Quarter'])
     
+    print(f"Original quarter_data before filtering:")
+    print(f"Total rows: {len(quarter_data)}")
+    print(f"Unique Fiscal_Year values: {quarter_data['Fiscal_Year'].unique()}")
+    print(f"Unique Quarter values: {quarter_data['Quarter'].unique()}")
+    print(f"Sample data:")
+    print(quarter_data[['Fiscal_Year', 'Quarter', 'Pharmacy', 'Value']].head(10))
+    
     # Apply quarter range filter if provided
-    if quarter_range_start and quarter_range_end:
+    if quarter_range_start or quarter_range_end:
         try:
+            print(f"Applying quarter range filter: {quarter_range_start} to {quarter_range_end}")
+            
             # Parse start quarter (e.g., "Q1-FY2025")
-            start_parts = quarter_range_start.split('-FY')
-            start_q = start_parts[0]
-            start_fy = int(start_parts[1])
+            start_q = 'Q1'
+            start_fy = 2025
+            if quarter_range_start:
+                start_parts = quarter_range_start.split('-FY')
+                start_q = start_parts[0]
+                start_fy = int(start_parts[1])
             
             # Parse end quarter (e.g., "Q2-FY2026")
-            end_parts = quarter_range_end.split('-FY')
-            end_q = end_parts[0]
-            end_fy = int(end_parts[1])
+            end_q = 'Q4'
+            end_fy = 2027
+            if quarter_range_end:
+                end_parts = quarter_range_end.split('-FY')
+                end_q = end_parts[0]
+                end_fy = int(end_parts[1])
+            
+            print(f"Parsed range: Q{start_q} FY{start_fy} to Q{end_q} FY{end_fy}")
+            
+            # Convert quarter strings to numbers for proper comparison
+            def quarter_to_num(q):
+                return int(q.replace('Q', ''))
             
             # Filter quarter data based on range
             filtered_quarters = []
+            print(f"Filtering quarters: start_fy={start_fy}, start_q={start_q}, end_fy={end_fy}, end_q={end_q}")
+            
             for _, row in quarter_data.iterrows():
                 row_fy = row['Fiscal_Year']
                 row_q = row['Quarter']
                 
+                # Clean fiscal year - remove FY prefix if present
+                if isinstance(row_fy, str):
+                    row_fy = row_fy.replace('FY', '').replace('fy', '').strip()
+                row_fy = int(row_fy)
+                
                 # Check if this quarter falls within the selected range
-                if (row_fy > start_fy or (row_fy == start_fy and row_q >= start_q)) and \
-                   (row_fy < end_fy or (row_fy == end_fy and row_q <= end_q)):
+                start_condition = (row_fy > start_fy or (row_fy == start_fy and quarter_to_num(row_q) >= quarter_to_num(start_q)))
+                end_condition = (row_fy < end_fy or (row_fy == end_fy and quarter_to_num(row_q) <= quarter_to_num(end_q)))
+                
+                if start_condition and end_condition:
                     filtered_quarters.append(row)
+                else:
+                    print(f"Excluded: FY{row_fy} {row_q} (start_condition={start_condition}, end_condition={end_condition})")
             
             if filtered_quarters:
                 quarter_data = pd.DataFrame(filtered_quarters)
+                print(f"Filtered data: {len(quarter_data)} rows")
+                print("Filtered quarters:", quarter_data[['Fiscal_Year', 'Quarter']].drop_duplicates().values.tolist())
             else:
                 quarter_data = pd.DataFrame(columns=quarter_data.columns)
+                print("No data after filtering")
                 
         except Exception as e:
             print(f"Error parsing quarter range: {e}")
             # Continue with unfiltered data if parsing fails
     
-    # Create quarter labels
+    # Create quarter labels from the filtered data only
     quarter_labels = []
-    unique_periods = quarter_data[['Fiscal_Year', 'Quarter']].drop_duplicates()
-    for _, row in unique_periods.iterrows():
-        fy_clean = str(row['Fiscal_Year']).replace('FY', '').replace('fy', '').strip()
-        quarter_labels.append(f"{row['Quarter']} FY{fy_clean}")
+    if not quarter_data.empty:
+        unique_periods = quarter_data[['Fiscal_Year', 'Quarter']].drop_duplicates().sort_values(['Fiscal_Year', 'Quarter'])
+        for _, row in unique_periods.iterrows():
+            fy_clean = str(row['Fiscal_Year']).replace('FY', '').replace('fy', '').strip()
+            quarter_labels.append(f"{row['Quarter']} FY{fy_clean}")
+    
+    print(f"Generated quarter labels: {quarter_labels}")
+    print(f"Number of quarter labels: {len(quarter_labels)}")
+    if not quarter_data.empty:
+        print(f"Sample of filtered quarter_data:")
+        print(quarter_data[['Fiscal_Year', 'Quarter', 'Pharmacy', 'Value']].head(10))
     
     pharmacies = quarter_data['Pharmacy'].unique().tolist()
     
@@ -790,4 +846,4 @@ def get_monthly_revenue():
         return jsonify({'error': f'Error getting monthly revenue: {str(e)}'}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=5001) 

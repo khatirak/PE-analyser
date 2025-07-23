@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Sidebar from './components/Sidebar';
-import { useData } from './hooks/useData';
-import { useChartData } from './hooks/useChartData';
 import { DataProvider } from './context/DataContext';
 
 function App() {

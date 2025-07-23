@@ -86,7 +86,7 @@ PE-analyser/
    cd backend
    python app.py
    ```
-   The Flask server will run on `http://localhost:5000`
+   The Flask server will run on `http://localhost:5001`
 
 2. **Start the frontend development server**
    ```bash
@@ -153,7 +153,7 @@ The application expects CSV files with the following columns:
 ## 🔧 Configuration
 
 ### Environment Variables
-- `REACT_APP_API_URL`: Backend API URL (defaults to `http://localhost:5000`)
+- `REACT_APP_API_URL`: Backend API URL (defaults to `http://localhost:5001`)
 
 ### Tailwind CSS
 Custom colors and animations are defined in `frontend/tailwind.config.js`:
