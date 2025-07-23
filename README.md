@@ -5,8 +5,11 @@ A modern, interactive analytics dashboard for pharmacy revenue data built with R
 ## 🚀 Features
 
 - **Interactive Charts**: Beautiful, responsive charts using Recharts
+- **General Metric Support**: Dropdown to select from any of the 9 available metrics
 - **Multiple View Types**: Month, Fiscal Year, and Quarter views
 - **Custom Range Filtering**: Filter data by custom date, fiscal year, or quarter ranges
+- **Total Line Toggle**: Show/hide the total line (black dashed line) for aggregated data
+- **Live Date Limits**: Current date is used as the upper limit for date ranges
 - **Pharmacy Management**: Select/deselect pharmacies with acquisition status indicators
 - **Acquisition Date Filtering**: Filter data from pharmacy acquisition dates onwards
 - **Real-time Updates**: Charts update automatically when filters change
@@ -169,11 +172,14 @@ The application expects CSV files with the following columns:
 ## 🎯 Key Features Explained
 
 ### Interactive Charts
-- **Line Charts**: Show revenue trends over time
+- **General Metric Charts**: Support for any of the 9 available metrics with dropdown selection
+- **Line Charts**: Show metric trends over time for selected pharmacies
+- **Total Line Toggle**: Show/hide aggregated total line (black dashed line)
 - **Responsive Design**: Charts adapt to screen size
-- **Custom Tooltips**: Detailed information on hover
+- **Custom Tooltips**: Detailed information on hover with proper formatting
 - **Legend**: Toggle individual pharmacy lines
-- **Currency Formatting**: Proper GBP formatting
+- **Smart Formatting**: Currency formatting for revenue metrics, number formatting for others
+- **Live Date Limits**: Current date automatically used as upper limit for date ranges
 
 ### View Types
 - **Month View**: Monthly revenue trends

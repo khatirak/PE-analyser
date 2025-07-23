@@ -11,43 +11,66 @@ class ChartService:
     
     def create_monthly_chart_data(self, revenue_data, date_range_start='', date_range_end=''):
         """Create monthly chart data"""
+        print(f"Creating monthly chart data with date range: {date_range_start} to {date_range_end}")
+        
         if revenue_data is None or revenue_data.empty:
             return {'labels': [], 'datasets': []}
         
         # Convert Date to datetime for proper sorting
         revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
         
-        # Filter by date range if provided
+        # Determine the date range for x-axis
+        if date_range_start and date_range_end:
+            start_date = parse_date(date_range_start)
+            end_date = parse_date(date_range_end)
+            if start_date and end_date:
+                print(f"Using specified date range: {start_date} to {end_date}")
+                # Generate complete date range for x-axis
+                date_range = pd.date_range(start=start_date, end=end_date, freq='MS')  # Month start
+                labels = [format_date(date) for date in date_range]
+            else:
+                # Fallback to data-based dates
+                dates = sorted(revenue_data['Date'].unique())
+                labels = [format_date(date) for date in dates]
+        else:
+            # No date range specified, use data-based dates
+            dates = sorted(revenue_data['Date'].unique())
+            labels = [format_date(date) for date in dates]
+        
+        # Filter data by date range if provided
         if date_range_start:
             start_date = parse_date(date_range_start)
             if start_date:
+                print(f"Filtering by start date: {start_date}")
                 revenue_data = revenue_data[revenue_data['Date'] >= start_date]
         
         if date_range_end:
             end_date = parse_date(date_range_end)
             if end_date:
+                print(f"Filtering by end date: {end_date}")
                 revenue_data = revenue_data[revenue_data['Date'] <= end_date]
         
-        # Sort by date
-        revenue_data = revenue_data.sort_values('Date')
+        print(f"Data after filtering: {len(revenue_data)} rows")
         
-        # Get unique dates and pharmacies
-        dates = revenue_data['Date'].unique()
+        # Get pharmacies
         pharmacies = revenue_data['Pharmacy'].unique()
-        
-        # Format dates for labels
-        labels = [format_date(date) for date in sorted(dates)]
         
         # Create datasets for each pharmacy
         datasets = []
         for i, pharmacy in enumerate(pharmacies):
             pharmacy_data = revenue_data[revenue_data['Pharmacy'] == pharmacy]
             
-            # Create data points for each date
+            # Create data points for each label (date)
             data = []
-            for date in sorted(dates):
-                date_data = pharmacy_data[pharmacy_data['Date'] == date]
-                total_value = date_data['Value'].sum() if not date_data.empty else 0
+            for label in labels:
+                # Convert label back to date for comparison
+                try:
+                    label_date = pd.to_datetime(label, format='%b-%y')
+                    date_data = pharmacy_data[pharmacy_data['Date'] == label_date]
+                    total_value = date_data['Value'].sum() if not date_data.empty else 0
+                except:
+                    # If label parsing fails, try to find matching data
+                    total_value = 0
                 data.append(total_value)
             
             datasets.append({
@@ -65,19 +88,28 @@ class ChartService:
         if revenue_data is None or revenue_data.empty:
             return {'labels': [], 'datasets': []}
         
-        # Filter by fiscal year range if provided
+        # Determine the fiscal year range for x-axis
+        if fiscal_year_range_start and fiscal_year_range_end:
+            start_year = int(fiscal_year_range_start)
+            end_year = int(fiscal_year_range_end)
+            print(f"Using specified fiscal year range: {start_year} to {end_year}")
+            # Generate complete fiscal year range for x-axis
+            fiscal_years = list(range(start_year, end_year + 1))
+            labels = [get_fiscal_year_label(year) for year in fiscal_years]
+        else:
+            # No range specified, use data-based fiscal years
+            fiscal_years = sorted(revenue_data['Fiscal_Year'].unique())
+            labels = [get_fiscal_year_label(year) for year in fiscal_years]
+        
+        # Filter data by fiscal year range if provided
         if fiscal_year_range_start:
             revenue_data = revenue_data[revenue_data['Fiscal_Year'] >= int(fiscal_year_range_start)]
         
         if fiscal_year_range_end:
             revenue_data = revenue_data[revenue_data['Fiscal_Year'] <= int(fiscal_year_range_end)]
         
-        # Get unique fiscal years and pharmacies
-        fiscal_years = sorted(revenue_data['Fiscal_Year'].unique())
+        # Get pharmacies
         pharmacies = revenue_data['Pharmacy'].unique()
-        
-        # Format fiscal years for labels
-        labels = [get_fiscal_year_label(year) for year in fiscal_years]
         
         # Create datasets for each pharmacy
         datasets = []
@@ -109,22 +141,53 @@ class ChartService:
         # Create fiscal quarter column
         revenue_data['Fiscal_Quarter'] = revenue_data['Fiscal_Year'].astype(str) + ' ' + revenue_data['Quarter']
         
-        # Filter by quarter range if provided
+        # Determine the quarter range for x-axis
+        if quarter_range_start and quarter_range_end:
+            print(f"Using specified quarter range: {quarter_range_start} to {quarter_range_end}")
+            # Parse the quarter range to generate complete range
+            start_parts = quarter_range_start.split(' ')
+            end_parts = quarter_range_end.split(' ')
+            if len(start_parts) == 2 and len(end_parts) == 2:
+                start_year = int(start_parts[0])
+                start_q = start_parts[1]
+                end_year = int(end_parts[0])
+                end_q = end_parts[1]
+                
+                # Generate complete quarter range
+                quarters = []
+                current_year = start_year
+                current_q = start_q
+                while (current_year < end_year) or (current_year == end_year and current_q <= end_q):
+                    quarters.append(f"{current_year} {current_q}")
+                    # Move to next quarter
+                    if current_q == 'Q1':
+                        current_q = 'Q2'
+                    elif current_q == 'Q2':
+                        current_q = 'Q3'
+                    elif current_q == 'Q3':
+                        current_q = 'Q4'
+                    elif current_q == 'Q4':
+                        current_q = 'Q1'
+                        current_year += 1
+                labels = quarters
+            else:
+                # Fallback to data-based quarters
+                quarters = sorted(revenue_data['Fiscal_Quarter'].unique(), key=sort_quarter_key)
+                labels = list(quarters)
+        else:
+            # No range specified, use data-based quarters
+            quarters = sorted(revenue_data['Fiscal_Quarter'].unique(), key=sort_quarter_key)
+            labels = list(quarters)
+        
+        # Filter data by quarter range if provided
         if quarter_range_start:
             revenue_data = revenue_data[revenue_data['Fiscal_Quarter'] >= quarter_range_start]
         
         if quarter_range_end:
             revenue_data = revenue_data[revenue_data['Fiscal_Quarter'] <= quarter_range_end]
         
-        # Sort quarters properly
-        revenue_data = revenue_data.sort_values(['Fiscal_Year', 'Quarter'], key=lambda x: x.map(sort_quarter_key))
-        
-        # Get unique quarters and pharmacies
-        quarters = revenue_data['Fiscal_Quarter'].unique()
+        # Get pharmacies
         pharmacies = revenue_data['Pharmacy'].unique()
-        
-        # Create labels
-        labels = list(quarters)
         
         # Create datasets for each pharmacy
         datasets = []
@@ -133,7 +196,7 @@ class ChartService:
             
             # Create data points for each quarter
             data = []
-            for quarter in quarters:
+            for quarter in labels:
                 quarter_data = pharmacy_data[pharmacy_data['Fiscal_Quarter'] == quarter]
                 total_value = quarter_data['Value'].sum() if not quarter_data.empty else 0
                 data.append(total_value)

@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, jsonify
 from config import Config
 from api.middleware.cors import setup_cors
 from api.routes.upload import upload_bp
@@ -6,6 +6,7 @@ from api.routes.stats import stats_bp
 from api.routes.pharmacy import pharmacy_bp
 from api.routes.revenue import revenue_bp
 from api.routes.metrics import metrics_bp
+from api.routes.chart import chart_bp
 from utils.file_utils import ensure_upload_directory
 from services.data_service import data_service
 import os
@@ -42,6 +43,12 @@ def create_app():
     app.register_blueprint(pharmacy_bp)
     app.register_blueprint(revenue_bp)
     app.register_blueprint(metrics_bp)
+    app.register_blueprint(chart_bp)
+    
+    # Health check endpoint
+    @app.route('/health')
+    def health_check():
+        return jsonify({'status': 'healthy', 'message': 'Backend is running'})
     
     return app
 

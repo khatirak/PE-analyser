@@ -9,7 +9,8 @@ export const API_CONFIG = {
     METRICS: '/api/metrics',
     REVENUE_DATA: '/api/revenue-data',
     REVENUE_BY_PERIOD: '/api/revenue-by-period',
-    MONTHLY_REVENUE: '/api/monthly-revenue'
+    MONTHLY_REVENUE: '/api/monthly-revenue',
+    CHART_DATA: '/api/chart-data'
   }
 };
 

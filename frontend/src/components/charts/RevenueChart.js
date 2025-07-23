@@ -59,11 +59,56 @@ function RevenueChart() {
     }).format(value);
   };
 
+  // Function to format date labels based on view type
+  const formatDateLabel = (label) => {
+    if (state.viewType === 'month') {
+      // For monthly view, labels are already in MMM-YY format
+      return label;
+    } else if (state.viewType === 'quarter') {
+      // For quarterly view, labels are in "YYYY QX" format
+      return label;
+    } else if (state.viewType === 'fiscal_year') {
+      // For fiscal year view, labels are in "FYYYY" format
+      return label;
+    }
+    return label;
+  };
+
+  // Calculate y-axis domain with 250,000 increments
+  const calculateYAxisDomain = () => {
+    if (transformedData.length === 0) return [0, 1000000];
+    
+    const maxValue = Math.max(...transformedData.map(item => item.totalRevenue));
+    const minValue = Math.min(...transformedData.map(item => item.totalRevenue));
+    
+    // Round up to nearest 250,000 for max, round down for min
+    const maxDomain = Math.ceil(maxValue / 250000) * 250000;
+    const minDomain = Math.floor(minValue / 250000) * 250000;
+    
+    // Ensure we have at least 2 ticks
+    if (maxDomain === minDomain) {
+      return [0, maxDomain + 250000];
+    }
+    
+    return [minDomain, maxDomain];
+  };
+
+  const [yMin, yMax] = calculateYAxisDomain();
+
+  // Generate y-axis ticks in 250,000 increments
+  const generateYTicks = () => {
+    const ticks = [];
+    for (let i = yMin; i <= yMax; i += 250000) {
+      ticks.push(i);
+    }
+    return ticks;
+  };
+
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium text-gray-900">{label}</p>
+          <p className="font-medium text-gray-900">{formatDateLabel(label)}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
               {entry.name}: {formatCurrency(entry.value)}
@@ -72,7 +117,7 @@ function RevenueChart() {
           {payload.length > 1 && (
             <div className="mt-2 pt-2 border-t border-gray-200">
               <p className="text-sm font-semibold text-gray-800">
-                Total: {formatCurrency(payload.reduce((sum, entry) => sum + entry.value, 0))}
+                Total: {formatCurrency(payload[0].payload.totalRevenue)}
               </p>
             </div>
           )}
@@ -92,6 +137,7 @@ function RevenueChart() {
             stroke="#6B7280"
             fontSize={12}
             tickMargin={10}
+            tickFormatter={formatDateLabel}
           />
           <YAxis 
             stroke="#6B7280"
@@ -99,6 +145,8 @@ function RevenueChart() {
             tickFormatter={formatCurrency}
             tickMargin={10}
             width={80}
+            domain={[yMin, yMax]}
+            ticks={generateYTicks()}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend />

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { fetchStats, fetchPharmacies, fetchClusters, fetchMetrics, testFetchConnection } from '../utils/api';
 
 const DataContext = createContext();
 
@@ -6,7 +7,10 @@ const initialState = {
   data: null,
   stats: null,
   pharmacies: [],
+  clusters: [],
+  metrics: [],
   selectedPharmacies: [],
+  selectedMetric: '',
   viewType: 'month',
   acquisitionFilter: false,
   acquisitionDate: '',
@@ -26,8 +30,14 @@ function dataReducer(state, action) {
       return { ...state, stats: action.payload };
     case 'SET_PHARMACIES':
       return { ...state, pharmacies: action.payload };
+    case 'SET_CLUSTERS':
+      return { ...state, clusters: action.payload };
+    case 'SET_METRICS':
+      return { ...state, metrics: action.payload };
     case 'SET_SELECTED_PHARMACIES':
       return { ...state, selectedPharmacies: action.payload };
+    case 'SET_SELECTED_METRIC':
+      return { ...state, selectedMetric: action.payload };
     case 'SET_VIEW_TYPE':
       return { ...state, viewType: action.payload };
     case 'SET_ACQUISITION_FILTER':
@@ -53,6 +63,68 @@ function dataReducer(state, action) {
 
 export function DataProvider({ children }) {
   const [state, dispatch] = useReducer(dataReducer, initialState);
+
+  // Load initial data when the app starts
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        console.log('Starting to load initial data...');
+        dispatch({ type: 'SET_LOADING', payload: true });
+        dispatch({ type: 'SET_ERROR', payload: null });
+        
+        // Wait a moment for backend to be fully ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Test with fetch first
+        console.log('Testing with fetch...');
+        const fetchWorks = await testFetchConnection();
+        if (!fetchWorks) {
+          console.error('Fetch test failed - there may be a CORS or network issue');
+        }
+        
+        // Load stats directly without connection test
+        console.log('Loading stats...');
+        const stats = await fetchStats();
+        console.log('Stats loaded:', stats);
+        dispatch({ type: 'SET_STATS', payload: stats });
+        
+        // Load pharmacies
+        console.log('Loading pharmacies...');
+        const pharmacies = await fetchPharmacies();
+        console.log('Pharmacies loaded:', pharmacies);
+        dispatch({ type: 'SET_PHARMACIES', payload: pharmacies });
+        
+        // Load clusters
+        console.log('Loading clusters...');
+        const clusters = await fetchClusters();
+        console.log('Clusters loaded:', clusters);
+        dispatch({ type: 'SET_CLUSTERS', payload: clusters });
+        
+        // Load metrics
+        console.log('Loading metrics...');
+        const metrics = await fetchMetrics();
+        console.log('Metrics loaded:', metrics);
+        dispatch({ type: 'SET_METRICS', payload: metrics });
+        
+        // Auto-select all pharmacies initially
+        dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: pharmacies.map(p => p.name) });
+        
+        // Set data flag to indicate data is available
+        dispatch({ type: 'SET_DATA', payload: { loaded: true } });
+        
+        console.log('Initial data loading completed successfully');
+        
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+        const errorMessage = error.message || 'Failed to load data. Please try refreshing the page.';
+        dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      } finally {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    };
+
+    loadInitialData();
+  }, []);
 
   return (
     <DataContext.Provider value={{ state, dispatch }}>

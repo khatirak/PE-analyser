@@ -4,40 +4,35 @@ import { useDataContext } from '../../context/DataContext';
 function RangeSelector() {
   const { state, dispatch } = useDataContext();
 
-  // Set default ranges when component mounts
+  // Set default ranges when component mounts and update end dates to current
   useEffect(() => {
     const setDefaultRanges = () => {
       const currentDate = new Date();
       const startDate = new Date('2024-04-01'); // Apr-24
       
-      // Set default month range
-      if (!state.dateRange.start && !state.dateRange.end) {
-        const startMonth = startDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-        const endMonth = currentDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-        dispatch({ type: 'SET_DATE_RANGE', payload: { start: startMonth, end: endMonth } });
-      }
+      // Always update month range end to current month
+      const startMonth = state.dateRange.start || startDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const endMonth = currentDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      dispatch({ type: 'SET_DATE_RANGE', payload: { start: startMonth, end: endMonth } });
       
-      // Set default quarter range
-      if (!state.quarterRange.start && !state.quarterRange.end) {
-        const startQuarter = '2024 Q1';
-        const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
-        const month = currentDate.getMonth() + 1;
-        const currentQ = month >= 4 && month <= 6 ? 'Q1' : 
-                        month >= 7 && month <= 9 ? 'Q2' : 
-                        month >= 10 && month <= 12 ? 'Q3' : 'Q4';
-        const endQuarter = `${currentFY} ${currentQ}`;
-        dispatch({ type: 'SET_QUARTER_RANGE', payload: { start: startQuarter, end: endQuarter } });
-      }
+      // Always update quarter range end to current quarter
+      const startQuarter = state.quarterRange.start || '2024 Q1';
+      const currentFYQuarter = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
+      const month = currentDate.getMonth() + 1;
+      const currentQ = month >= 4 && month <= 6 ? 'Q1' : 
+                      month >= 7 && month <= 9 ? 'Q2' : 
+                      month >= 10 && month <= 12 ? 'Q3' : 'Q4';
+      const endQuarter = `${currentFYQuarter} ${currentQ}`;
+      dispatch({ type: 'SET_QUARTER_RANGE', payload: { start: startQuarter, end: endQuarter } });
       
-      // Set default fiscal year range
-      if (!state.fiscalYearRange.start && !state.fiscalYearRange.end) {
-        const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
-        dispatch({ type: 'SET_FISCAL_YEAR_RANGE', payload: { start: '2024', end: currentFY.toString() } });
-      }
+      // Always update fiscal year range end to current fiscal year
+      const startFY = state.fiscalYearRange.start || '2024';
+      const currentFYFiscal = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
+      dispatch({ type: 'SET_FISCAL_YEAR_RANGE', payload: { start: startFY, end: currentFYFiscal.toString() } });
     };
 
     setDefaultRanges();
-  }, []);
+  }, [state.viewType]); // Re-run when view type changes
 
   const handleDateRangeChange = (field, value) => {
     dispatch({ 

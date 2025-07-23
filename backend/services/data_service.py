@@ -141,6 +141,31 @@ class DataService:
             revenue_data = self._apply_custom_acquisition_filter(revenue_data, acquisition_date)
         
         return revenue_data
+
+    def get_chart_data(self, pharmacies=None, metric=None, acquisition_dates=None, acquisition_date=None):
+        """Get chart data for any metric with optional filters"""
+        if self.current_data is None:
+            return None
+        
+        chart_data = self.current_data.copy()
+        
+        # Filter by selected pharmacies
+        if pharmacies:
+            chart_data = chart_data[chart_data['Pharmacy'].isin(pharmacies)]
+        
+        # Filter by metric if specified
+        if metric:
+            chart_data = chart_data[chart_data['Metric'] == metric]
+        
+        # Apply acquisition date filter
+        if acquisition_dates:
+            chart_data = self._apply_acquisition_filter(chart_data, acquisition_dates)
+        
+        # Apply custom acquisition date filter
+        if acquisition_date:
+            chart_data = self._apply_custom_acquisition_filter(chart_data, acquisition_date)
+        
+        return chart_data
     
     def _apply_acquisition_filter(self, revenue_data, acquisition_dates):
         """Apply acquisition date filter to revenue data"""
