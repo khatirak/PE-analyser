@@ -437,3 +437,111 @@ body {
     font-weight: 500;
     font-size: 0.95rem;
 }
+
+/* Revenue Highlight Card */
+.revenue-highlight {
+    background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+    border: 2px solid #3251FC;
+}
+
+.revenue-highlight:hover {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8efff 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(50, 81, 252, 0.2);
+}
+
+/* Monthly Revenue Modal Styles */
+.current-selection {
+    background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    text-align: center;
+    border: 2px solid #3251FC;
+}
+
+.current-selection h3 {
+    color: #19252F;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.current-revenue {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.revenue-amount {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #3251FC;
+}
+
+.revenue-subtitle {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.month-selector h4 {
+    color: #19252F;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.months-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 5px;
+}
+
+.month-button {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 15px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.month-button:hover {
+    border-color: #3251FC;
+    background: #f8f9ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(50, 81, 252, 0.15);
+}
+
+.month-button.selected {
+    border-color: #3251FC;
+    background: linear-gradient(135deg, #3251FC 0%, #2847E8 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(50, 81, 252, 0.3);
+}
+
+.month-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: inherit;
+}
+
+.month-revenue {
+    font-weight: 700;
+    font-size: 1rem;
+    color: inherit;
+}
+
+.month-button.selected .month-name,
+.month-button.selected .month-revenue {
+    color: white;
+}

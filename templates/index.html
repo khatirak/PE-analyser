@@ -40,6 +40,12 @@
                     <div class="card-hint">Click to view list</div>
                 </div>
                 
+                <div class="stat-card revenue-highlight clickable-card" id="monthlyRevenueCard" onclick="showMonthlyRevenueModal()">
+                    <div class="stat-number" id="monthlyRevenue">$0</div>
+                    <div class="stat-label" id="monthlyRevenueLabel">Current Month Revenue</div>
+                    <div class="card-hint">Click to select month</div>
+                </div>
+                
             </div>
             
             <div class="chart-section">
@@ -72,6 +78,31 @@
             <div class="modal-body">
                 <div id="pharmaciesList" class="pharmacies-list">
                     <!-- Pharmacy list will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Revenue Modal -->
+    <div id="monthlyRevenueModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select Month for Revenue</h2>
+                <span class="close" onclick="closeMonthlyRevenueModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="current-selection">
+                    <h3>Current Selection: <span id="selectedMonthDisplay">Loading...</span></h3>
+                    <div class="current-revenue">
+                        <span class="revenue-amount" id="selectedMonthRevenue">$0</span>
+                        <span class="revenue-subtitle">Total Revenue (All Pharmacies)</span>
+                    </div>
+                </div>
+                <div class="month-selector">
+                    <h4>Select Different Month:</h4>
+                    <div id="monthsList" class="months-grid">
+                        <!-- Month buttons will be populated here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -158,6 +189,7 @@
                 
                 dashboard.style.display = 'block';
                 loadPharmacySelector();
+                loadCurrentMonthRevenue();
             } else {
                 console.error('Invalid stats data:', stats);
                 showAlert('Error displaying statistics', 'error');
@@ -407,14 +439,108 @@
 
         // Close modal when clicking outside of it
         window.onclick = function(event) {
-            const modal = document.getElementById('pharmaciesModal');
-            if (event.target === modal) {
+            const pharmaciesModal = document.getElementById('pharmaciesModal');
+            const revenueModal = document.getElementById('monthlyRevenueModal');
+            
+            if (event.target === pharmaciesModal) {
                 closePharmaciesModal();
+            }
+            if (event.target === revenueModal) {
+                closeMonthlyRevenueModal();
             }
         }
 
         // Make current_data accessible for modal check
         let current_data = null;
+        let currentSelectedMonth = null;
+
+        // Monthly Revenue Modal Functions
+        function showMonthlyRevenueModal() {
+            if (current_data === null) {
+                showAlert('No data loaded. Please upload a CSV file first.', 'error');
+                return;
+            }
+            
+            // Fetch available months and current month revenue
+            fetch('/api/monthly-revenue')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert('Error loading monthly revenue data: ' + data.error, 'error');
+                } else {
+                    populateMonthsList(data.months, data.current_month, data.current_revenue);
+                    document.getElementById('monthlyRevenueModal').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching monthly revenue:', error);
+                showAlert('Error loading monthly revenue data', 'error');
+            });
+        }
+
+        function closeMonthlyRevenueModal() {
+            document.getElementById('monthlyRevenueModal').style.display = 'none';
+        }
+
+        function populateMonthsList(months, currentMonth, currentRevenue) {
+            currentSelectedMonth = currentMonth;
+            
+            // Update current selection display
+            document.getElementById('selectedMonthDisplay').textContent = currentMonth;
+            document.getElementById('selectedMonthRevenue').textContent = '$' + currentRevenue.toLocaleString();
+            
+            // Populate months grid
+            const monthsList = document.getElementById('monthsList');
+            monthsList.innerHTML = '';
+            
+            months.forEach(monthData => {
+                const monthButton = document.createElement('button');
+                monthButton.className = 'month-button';
+                if (monthData.month === currentMonth) {
+                    monthButton.classList.add('selected');
+                }
+                
+                monthButton.innerHTML = `
+                    <div class="month-name">${monthData.month}</div>
+                    <div class="month-revenue">$${monthData.revenue.toLocaleString()}</div>
+                `;
+                
+                monthButton.onclick = () => selectMonth(monthData.month, monthData.revenue);
+                monthsList.appendChild(monthButton);
+            });
+        }
+
+        function selectMonth(month, revenue) {
+            currentSelectedMonth = month;
+            
+            // Update display
+            document.getElementById('selectedMonthDisplay').textContent = month;
+            document.getElementById('selectedMonthRevenue').textContent = '$' + revenue.toLocaleString();
+            
+            // Update main scorecard
+            document.getElementById('monthlyRevenue').textContent = '$' + revenue.toLocaleString();
+            document.getElementById('monthlyRevenueLabel').textContent = month + ' Revenue';
+            
+            // Update button selection
+            document.querySelectorAll('.month-button').forEach(btn => btn.classList.remove('selected'));
+            event.target.closest('.month-button').classList.add('selected');
+        }
+
+        function loadCurrentMonthRevenue() {
+            if (current_data === null) return;
+            
+            fetch('/api/monthly-revenue')
+            .then(response => response.json())
+            .then(data => {
+                if (!data.error) {
+                    document.getElementById('monthlyRevenue').textContent = '$' + data.current_revenue.toLocaleString();
+                    document.getElementById('monthlyRevenueLabel').textContent = data.current_month + ' Revenue';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading current month revenue:', error);
+            });
+        }
     </script>
 </body>
 </html> 

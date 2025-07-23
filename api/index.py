@@ -178,5 +178,61 @@ def get_revenue_data():
     except Exception as e:
         return jsonify({'error': f'Error getting revenue data: {str(e)}'}), 400
 
+@app.route('/api/monthly-revenue')
+def get_monthly_revenue():
+    global current_data
+    
+    if current_data is None:
+        return jsonify({'error': 'No data uploaded'}), 400
+    
+    try:
+        # Filter for Total Revenue metric only
+        revenue_data = current_data[current_data['Metric'] == 'Total Revenue'].copy()
+        
+        if revenue_data.empty:
+            return jsonify({'error': 'No Total Revenue data found'}), 400
+        
+        # Convert Date to datetime for proper processing
+        revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
+        
+        # Group by month and sum the revenue across all pharmacies
+        monthly_revenue = revenue_data.groupby(revenue_data['Date'].dt.to_period('M'))['Value'].sum().reset_index()
+        monthly_revenue['Date'] = monthly_revenue['Date'].astype(str)
+        
+        # Get current month (most recent month in data)
+        current_month_period = revenue_data['Date'].max().to_period('M')
+        current_month_str = str(current_month_period)
+        
+        # Format the data for the frontend
+        months_data = []
+        current_revenue = 0
+        
+        for _, row in monthly_revenue.iterrows():
+            month_formatted = pd.Period(row['Date']).strftime('%b-%y')
+            revenue = float(row['Value'])
+            
+            months_data.append({
+                'month': month_formatted,
+                'revenue': revenue
+            })
+            
+            if row['Date'] == current_month_str:
+                current_revenue = revenue
+        
+        # Sort by date (most recent first)
+        months_data.sort(key=lambda x: pd.to_datetime(x['month'], format='%b-%y'), reverse=True)
+        
+        # Get current month formatted
+        current_month_formatted = pd.Period(current_month_str).strftime('%b-%y')
+        
+        return jsonify({
+            'months': months_data,
+            'current_month': current_month_formatted,
+            'current_revenue': current_revenue
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error getting monthly revenue: {str(e)}'}), 400
+
 # Export the Flask app for Vercel
 # The variable must be named 'app' for Vercel to recognize it 
