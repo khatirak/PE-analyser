@@ -1,8 +1,9 @@
 import React from 'react';
-import { useDataContext } from '../context/DataContext';
-import StatsGrid from './StatsGrid';
-import RevenueChart from './RevenueChart';
-import ViewSelector from './ViewSelector';
+import { useDataContext } from '../../context/DataContext';
+import StatsGrid from '../charts/StatsGrid';
+import RevenueChart from '../charts/RevenueChart';
+import ViewSelector from '../filters/ViewSelector';
+import RevenueCard from './RevenueCard';
 
 function Dashboard() {
   const { state } = useDataContext();
@@ -29,11 +30,17 @@ function Dashboard() {
         <div className="mb-8">
           <StatsGrid />
         </div>
+
+        <div className="mb-8">
+          <RevenueCard />
+        </div>
         
-        <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Total Revenue by Pharmacy Over Time
-          </h2>
+        <div className="chart-container">
+          <div className="chart-header">
+            <h2 className="chart-title">
+              Total Revenue by Pharmacy Over Time
+            </h2>
+          </div>
           <RevenueChart />
         </div>
       </div>

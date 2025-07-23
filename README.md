@@ -21,19 +21,41 @@ PE-analyser/
 │   ├── public/              # Static files
 │   ├── src/
 │   │   ├── components/      # React components
+│   │   │   ├── common/      # Reusable components (Header, Sidebar, Modal)
+│   │   │   ├── charts/      # Chart-related components (RevenueChart, StatsGrid)
+│   │   │   ├── filters/     # Filter components (RangeSelector, ViewSelector, PharmacySelector)
+│   │   │   └── dashboard/   # Dashboard-specific components (Dashboard, RevenueCard)
 │   │   ├── context/         # React context for state management
 │   │   ├── hooks/           # Custom React hooks
 │   │   ├── utils/           # Utility functions
+│   │   ├── constants/       # Constants and configuration
+│   │   ├── styles/          # CSS and styling
 │   │   ├── App.js           # Main app component
 │   │   └── index.js         # React entry point
 │   ├── package.json         # Frontend dependencies
 │   └── tailwind.config.js   # Tailwind CSS configuration
 ├── backend/                  # Flask backend
 │   ├── api/                 # API endpoints
-│   ├── utils/               # Backend utilities
-│   ├── uploads/             # File upload directory
+│   │   ├── routes/          # Route blueprints
+│   │   │   ├── upload.py    # File upload endpoints
+│   │   │   ├── pharmacy.py  # Pharmacy-related endpoints
+│   │   │   ├── revenue.py   # Revenue data endpoints
+│   │   │   └── stats.py     # Statistics endpoints
+│   │   └── middleware/      # Middleware (CORS, etc.)
+│   ├── services/            # Business logic services
+│   │   ├── data_service.py  # Data processing logic
+│   │   ├── chart_service.py # Chart data generation
+│   │   └── validation_service.py # Data validation
+│   ├── utils/               # Utility functions
+│   │   ├── file_utils.py    # File handling utilities
+│   │   ├── date_utils.py    # Date processing utilities
+│   │   └── data_utils.py    # Data manipulation utilities
+│   ├── models/              # Data models
+│   │   └── data_models.py   # Data models/schemas
+│   ├── config.py            # Configuration settings
 │   ├── app.py               # Main Flask application
-│   └── requirements.txt     # Python dependencies
+│   ├── requirements.txt     # Python dependencies
+│   └── uploads/             # File upload directory
 ├── vercel.json              # Vercel deployment configuration
 └── README.md               # This file
 ```
@@ -51,6 +73,26 @@ PE-analyser/
 - **Flask** - Python web framework
 - **Pandas** - Data manipulation and analysis
 - **Flask-CORS** - Cross-origin resource sharing
+
+## 🏗️ Architecture
+
+### Backend Architecture
+The backend follows a modular, service-oriented architecture:
+
+- **API Routes**: Organized into blueprints by functionality
+- **Services**: Business logic separated into focused service classes
+- **Utils**: Reusable utility functions for common operations
+- **Models**: Data models and schemas for type safety
+- **Config**: Centralized configuration management
+
+### Frontend Architecture
+The frontend follows a component-based architecture:
+
+- **Common Components**: Reusable UI components (Header, Sidebar, etc.)
+- **Feature Components**: Components organized by feature/domain
+- **Context**: Global state management using React Context
+- **Hooks**: Custom React hooks for reusable logic
+- **Utils**: Utility functions for API calls and data processing
 
 ## 🚀 Getting Started
 
@@ -155,12 +197,20 @@ The application expects CSV files with the following columns:
 ### Environment Variables
 - `REACT_APP_API_URL`: Backend API URL (defaults to `http://localhost:5001`)
 
-### Tailwind CSS
-Custom colors and animations are defined in `frontend/tailwind.config.js`:
-- Primary colors for the brand
-- Success colors for acquired pharmacies
-- Warning colors for pipeline pharmacies
-- Custom animations for smooth transitions
+### Backend Configuration
+Configuration is centralized in `backend/config.py`:
+- Flask settings
+- File upload settings
+- CORS settings
+- Data validation rules
+- Chart configuration
+
+### Frontend Configuration
+Configuration is centralized in `frontend/src/constants/config.js`:
+- API endpoints
+- Chart colors and animations
+- View types
+- UI constants
 
 ## 🚀 Deployment
 
@@ -180,6 +230,20 @@ The project includes `vercel.json` configuration for easy deployment to Vercel.
 
 ### Other Platforms
 The Flask app can be deployed to any platform that supports Python applications (Heroku, Railway, etc.).
+
+## 🧪 Testing
+
+### Backend Testing
+```bash
+cd backend
+python -m pytest tests/
+```
+
+### Frontend Testing
+```bash
+cd frontend
+npm test
+```
 
 ## 🤝 Contributing
 

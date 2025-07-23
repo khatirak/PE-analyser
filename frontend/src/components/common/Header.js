@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, BarChart3 } from 'lucide-react';
-import { useDataContext } from '../context/DataContext';
-import { uploadFile } from '../utils/api';
+import { useDataContext } from '../../context/DataContext';
+import { uploadFile } from '../../utils/api';
 
 function Header() {
   const { state, dispatch } = useDataContext();

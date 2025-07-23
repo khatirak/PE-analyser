@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDataContext } from '../context/DataContext';
+import { useDataContext } from '../../context/DataContext';
 
 function ViewSelector() {
   const { state, dispatch } = useDataContext();

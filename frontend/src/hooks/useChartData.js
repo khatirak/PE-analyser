@@ -17,20 +17,32 @@ export const useChartData = () => {
       try {
         const params = {
           view_type: state.viewType,
-          pharmacies: state.selectedPharmacies.join(','),
+          'pharmacies[]': state.selectedPharmacies,
           acquisition_filter: state.acquisitionFilter
         };
 
         // Add range parameters based on view type
-        if (state.viewType === 'month' && state.dateRange.start && state.dateRange.end) {
-          params.date_range_start = state.dateRange.start;
-          params.date_range_end = state.dateRange.end;
-        } else if (state.viewType === 'quarter' && state.quarterRange.start && state.quarterRange.end) {
-          params.quarter_range_start = state.quarterRange.start;
-          params.quarter_range_end = state.quarterRange.end;
-        } else if (state.viewType === 'fiscal_year' && state.fiscalYearRange.start && state.fiscalYearRange.end) {
-          params.fiscal_year_range_start = state.fiscalYearRange.start;
-          params.fiscal_year_range_end = state.fiscalYearRange.end;
+        if (state.viewType === 'month') {
+          if (state.dateRange.start) {
+            params.date_range_start = state.dateRange.start;
+          }
+          if (state.dateRange.end) {
+            params.date_range_end = state.dateRange.end;
+          }
+        } else if (state.viewType === 'quarter') {
+          if (state.quarterRange.start) {
+            params.quarter_range_start = state.quarterRange.start;
+          }
+          if (state.quarterRange.end) {
+            params.quarter_range_end = state.quarterRange.end;
+          }
+        } else if (state.viewType === 'fiscal_year') {
+          if (state.fiscalYearRange.start) {
+            params.fiscal_year_range_start = state.fiscalYearRange.start;
+          }
+          if (state.fiscalYearRange.end) {
+            params.fiscal_year_range_end = state.fiscalYearRange.end;
+          }
         }
 
         const data = await fetchChartData(params);

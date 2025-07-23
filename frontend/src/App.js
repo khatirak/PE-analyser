@@ -1,8 +1,9 @@
 import React from 'react';
-import Header from './components/Header';
-import Dashboard from './components/Dashboard';
-import Sidebar from './components/Sidebar';
+import Header from './components/common/Header';
+import Dashboard from './components/dashboard/Dashboard';
+import Sidebar from './components/common/Sidebar';
 import { DataProvider } from './context/DataContext';
+import './styles/components.css';
 
 function App() {
   return (

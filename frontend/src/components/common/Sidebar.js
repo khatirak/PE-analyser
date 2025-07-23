@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { useDataContext } from '../context/DataContext';
-import { fetchPharmacies } from '../utils/api';
-import PharmacySelector from './PharmacySelector';
-import RangeSelector from './RangeSelector';
+import { useDataContext } from '../../context/DataContext';
+import { fetchPharmacies } from '../../utils/api';
+import PharmacySelector from '../filters/PharmacySelector';
+import RangeSelector from '../filters/RangeSelector';
 
 function Sidebar() {
   const { state, dispatch } = useDataContext();
@@ -28,16 +28,16 @@ function Sidebar() {
   }
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 p-6 overflow-y-auto">
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+    <div className="sidebar">
+      <div className="sidebar-content">
+        <div className="sidebar-section">
+          <h3 className="sidebar-title">
             Select Pharmacies
           </h3>
           <PharmacySelector />
         </div>
         
-        <div>
+        <div className="sidebar-section">
           <RangeSelector />
         </div>
       </div>

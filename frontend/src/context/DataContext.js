@@ -9,6 +9,7 @@ const initialState = {
   selectedPharmacies: [],
   viewType: 'month',
   acquisitionFilter: false,
+  acquisitionDate: '',
   dateRange: { start: '', end: '' },
   quarterRange: { start: '', end: '' },
   fiscalYearRange: { start: '', end: '' },
@@ -37,6 +38,8 @@ function dataReducer(state, action) {
       return { ...state, quarterRange: action.payload };
     case 'SET_FISCAL_YEAR_RANGE':
       return { ...state, fiscalYearRange: action.payload };
+    case 'SET_ACQUISITION_DATE':
+      return { ...state, acquisitionDate: action.payload };
     case 'SET_CHART_DATA':
       return { ...state, chartData: action.payload };
     case 'SET_LOADING':
