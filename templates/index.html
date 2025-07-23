@@ -5,271 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PE Analyser Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            color: white;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .upload-section {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            text-align: center;
-        }
-
-        .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 10px;
-            padding: 40px;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .upload-area:hover {
-            border-color: #764ba2;
-            background-color: #f8f9ff;
-        }
-
-        .upload-area.dragover {
-            border-color: #764ba2;
-            background-color: #f0f4ff;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .upload-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: transform 0.2s ease;
-        }
-
-        .upload-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .dashboard {
-            display: none;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: transform 0.2s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .stat-label {
-            font-size: 1.1rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            color: #667eea;
-            font-size: 18px;
-            margin: 20px 0;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .pharmacy-highlight {
-            background: white;
-            color: #333;
-        }
-
-        .chart-section {
-            margin-top: 30px;
-        }
-
-        .chart-container {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            width: 100%;
-            height: 700px;
-        }
-
-        .chart-container h2 {
-            margin-bottom: 20px;
-            color: #333;
-            text-align: center;
-            font-size: 1.5rem;
-        }
-
-        #revenueChart {
-            width: 100% !important;
-            height: 600px !important;
-            max-height: none;
-        }
-
-        .pharmacy-selector {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .pharmacy-selector h3 {
-            margin-bottom: 15px;
-            color: #333;
-            text-align: center;
-        }
-
-        .pharmacy-checkboxes {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #eee;
-            padding: 15px;
-            border-radius: 8px;
-        }
-
-        .pharmacy-checkbox {
-            display: flex;
-            align-items: center;
-            padding: 5px;
-        }
-
-        .pharmacy-checkbox input[type="checkbox"] {
-            margin-right: 8px;
-            transform: scale(1.2);
-        }
-
-        .pharmacy-checkbox label {
-            cursor: pointer;
-            font-size: 14px;
-            user-select: none;
-        }
-
-        .selector-controls {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .select-btn, .update-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: transform 0.2s ease;
-        }
-
-        .select-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .update-btn {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            font-weight: bold;
-        }
-
-        .select-btn:hover, .update-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
@@ -298,9 +34,10 @@
 
         <div class="dashboard" id="dashboard">
             <div class="stats-grid">
-                <div class="stat-card pharmacy-highlight">
+                <div class="stat-card pharmacy-highlight clickable-card" id="pharmaciesCard" onclick="showPharmaciesModal()">
                     <div class="stat-number" id="uniquePharmacies">0</div>
                     <div class="stat-label">Unique Pharmacies</div>
+                    <div class="card-hint">Click to view list</div>
                 </div>
                 
             </div>
@@ -320,6 +57,21 @@
                 <div class="chart-container">
                     <h2>Total Revenue by Pharmacy Over Time</h2>
                     <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pharmacies Modal -->
+    <div id="pharmaciesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Pharmacy List</h2>
+                <span class="close" onclick="closePharmaciesModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="pharmaciesList" class="pharmacies-list">
+                    <!-- Pharmacy list will be populated here -->
                 </div>
             </div>
         </div>
@@ -582,10 +334,12 @@
                 
                 if (data.error) {
                     showAlert(data.error, 'error');
+                    current_data = null;
                 } else {
                     showAlert(data.message, 'success');
                     // Handle both response structures: nested stats or direct stats
                     const statsData = data.stats || data;
+                    current_data = true; // Mark that data has been loaded
                     updateStats(statsData);
                 }
             })
@@ -600,12 +354,67 @@
         .then(response => response.json())
         .then(data => {
             if (!data.error) {
+                current_data = true; // Mark that data exists
                 updateStats(data);
             }
         })
         .catch(error => {
             console.log('No existing data loaded');
         });
+
+        // Modal functionality
+        function showPharmaciesModal() {
+            if (current_data === null) {
+                showAlert('No data loaded. Please upload a CSV file first.', 'error');
+                return;
+            }
+            
+            // Fetch pharmacies and populate modal
+            fetch('/api/pharmacies')
+            .then(response => response.json())
+            .then(pharmacies => {
+                if (Array.isArray(pharmacies)) {
+                    populatePharmaciesList(pharmacies);
+                    document.getElementById('pharmaciesModal').style.display = 'block';
+                } else {
+                    showAlert('Error loading pharmacies list', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching pharmacies:', error);
+                showAlert('Error loading pharmacies list', 'error');
+            });
+        }
+
+        function closePharmaciesModal() {
+            document.getElementById('pharmaciesModal').style.display = 'none';
+        }
+
+        function populatePharmaciesList(pharmacies) {
+            const listContainer = document.getElementById('pharmaciesList');
+            listContainer.innerHTML = '';
+            
+            pharmacies.forEach((pharmacy, index) => {
+                const pharmacyItem = document.createElement('div');
+                pharmacyItem.className = 'pharmacy-item';
+                pharmacyItem.innerHTML = `
+                    <span class="pharmacy-number">${index + 1}</span>
+                    <span class="pharmacy-name">${pharmacy}</span>
+                `;
+                listContainer.appendChild(pharmacyItem);
+            });
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('pharmaciesModal');
+            if (event.target === modal) {
+                closePharmaciesModal();
+            }
+        }
+
+        // Make current_data accessible for modal check
+        let current_data = null;
     </script>
 </body>
 </html> 

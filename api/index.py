@@ -4,21 +4,18 @@ import pandas as pd
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
+import tempfile
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates', static_folder='../static')
 CORS(app)
 
-# Configuration
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'csv'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# Configuration for serverless environment
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
-# Create uploads directory if it doesn't exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Global variable to store the current dataset
 current_data = None
+
+ALLOWED_EXTENSIONS = {'csv'}
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -40,13 +37,9 @@ def upload_file():
         return jsonify({'error': 'No selected file'}), 400
     
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        
         try:
-            # Read the CSV file (first row is treated as column names)
-            current_data = pd.read_csv(filepath, header=0)
+            # Read the CSV file directly from memory (first row is treated as column names)
+            current_data = pd.read_csv(file, header=0)
             
             # Basic validation
             expected_columns = ['Pharmacy', 'Cluster', 'Acquisition_Date', 'Metric', 'Fiscal_Year', 'Quarter', 'Date', 'Value']
@@ -184,5 +177,10 @@ def get_revenue_data():
     except Exception as e:
         return jsonify({'error': f'Error getting revenue data: {str(e)}'}), 400
 
+# This is the entry point for Vercel
+def handler(request):
+    return app(request.environ, lambda status, headers: None)
+
+# For local development
 if __name__ == '__main__':
     app.run(debug=True, port=5001) 
