@@ -10,78 +10,84 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>PE Analyser Dashboard</h1>
-            <p>Upload your CSV file to analyze pharmacy data</p>
-        </div>
-
-        <div class="upload-section">
-            <div class="upload-area" id="uploadArea">
-                <h3>Drop your CSV file here or click to browse</h3>
-                <p>Supports CSV files up to 16MB</p>
-                <input type="file" id="fileInput" class="file-input" accept=".csv">
-                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                    Choose File
-                </button>
+            <div class="header-main">
+                <div class="title-section">
+                    <h1>PE Analyser Dashboard</h1>
+                </div>
+                <div class="right-controls">
+                    <div class="upload-status" id="uploadStatus">
+                        <div class="compact-upload" id="compactUpload" title="Upload CSV file (max 16MB) or drag & drop anywhere">
+                            <input type="file" id="fileInput" class="file-input" accept=".csv">
+                            <button class="compact-upload-btn" onclick="document.getElementById('fileInput').click()">
+                                📊 Upload CSV
+                            </button>
+                        </div>
+                        <div class="loading" id="loading">
+                            <div class="spinner"></div>
+                            Processing your file...
+                        </div>
+                        <div id="alertContainer"></div>
+                    </div>
+                    
+                    <!-- View Type Selector -->
+                    <div class="view-selector" id="viewSelector" style="display: none;">
+                        <label for="viewType">View by:</label>
+                        <select id="viewType" onchange="changeViewType()">
+                            <option value="month">Month</option>
+                            <option value="fiscal_year">Fiscal Year</option>
+                            <option value="quarter">Quarter (by FY)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
-            
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                Processing your file...
-            </div>
-            
-            <div id="alertContainer"></div>
         </div>
 
         <div class="dashboard" id="dashboard">
-            <div class="stats-grid">
-                <div class="stat-card pharmacy-highlight clickable-card" id="pharmaciesCard" onclick="showPharmaciesModal()">
-                    <div class="stat-number" id="uniquePharmacies">0</div>
-                    <div class="stat-label">Unique Pharmacies</div>
-                    <div class="card-hint">Click to view list</div>
+            <div class="dashboard-layout">
+                <div class="main-content">
+                    <div class="stats-grid">
+                        <div class="stat-card pharmacy-highlight">
+                            <div class="stat-number" id="uniquePharmacies">0</div>
+                            <div class="stat-label">Acquired Pharmacies + Pipelines</div>
+                        </div>
+                        
+                        <div class="stat-card revenue-highlight clickable-card" id="monthlyRevenueCard" onclick="showMonthlyRevenueModal()">
+                            <div class="stat-number" id="monthlyRevenue">£0</div>
+                            <div class="revenue-change" id="revenueChange" style="display: none;">
+                                <span class="change-icon" id="changeIcon"></span>
+                                <span class="change-percentage" id="changePercentage"></span>
+                            </div>
+                            <div class="stat-label" id="monthlyRevenueLabel">Current Live Month Revenue</div>
+                            <div class="card-hint">Click to select month</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-section">
+                        <div class="chart-container">
+                            <h2>Total Revenue by Pharmacy Over Time</h2>
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="stat-card revenue-highlight clickable-card" id="monthlyRevenueCard" onclick="showMonthlyRevenueModal()">
-                    <div class="stat-number" id="monthlyRevenue">$0</div>
-                    <div class="stat-label" id="monthlyRevenueLabel">Current Month Revenue</div>
-                    <div class="card-hint">Click to select month</div>
-                </div>
-                
-            </div>
-            
-            <div class="chart-section">
-                <div class="pharmacy-selector">
-                    <h3>Select Pharmacies to Display</h3>
-                    <div class="pharmacy-checkboxes" id="pharmacyCheckboxes">
-                        <!-- Pharmacy checkboxes will be populated dynamically -->
+                <div class="sidebar">
+                    <div class="pharmacy-selector">
+                        <h3>Select Pharmacies</h3>
+                        <div class="selector-controls">
+                            <button class="select-btn" onclick="selectAll()">All</button>
+                            <button class="select-btn" onclick="clearAllSelections()">None</button>
+                            <button class="update-btn" onclick="updateChartWithSelection()">Update Chart</button>
+                        </div>
+                        <div class="pharmacy-checkboxes" id="pharmacyCheckboxes">
+                            <!-- Pharmacy checkboxes will be populated dynamically -->
+                        </div>
                     </div>
-                    <div class="selector-controls">
-                        <button class="select-btn" onclick="selectAll()">Select All</button>
-                        <button class="select-btn" onclick="clearAllSelections()">Clear All</button>
-                        <button class="update-btn" onclick="updateChartWithSelection()">Update Chart</button>
-                    </div>
-                </div>
-                <div class="chart-container">
-                    <h2>Total Revenue by Pharmacy Over Time</h2>
-                    <canvas id="revenueChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Pharmacies Modal -->
-    <div id="pharmaciesModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Pharmacy List</h2>
-                <span class="close" onclick="closePharmaciesModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div id="pharmaciesList" class="pharmacies-list">
-                    <!-- Pharmacy list will be populated here -->
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Removed pharmacies modal - now using sidebar -->
 
     <!-- Monthly Revenue Modal -->
     <div id="monthlyRevenueModal" class="modal">
@@ -94,7 +100,7 @@
                 <div class="current-selection">
                     <h3>Current Selection: <span id="selectedMonthDisplay">Loading...</span></h3>
                     <div class="current-revenue">
-                        <span class="revenue-amount" id="selectedMonthRevenue">$0</span>
+                        <span class="revenue-amount" id="selectedMonthRevenue">£0</span>
                         <span class="revenue-subtitle">Total Revenue (All Pharmacies)</span>
                     </div>
                 </div>
@@ -109,7 +115,7 @@
     </div>
 
     <script>
-        const uploadArea = document.getElementById('uploadArea');
+        const compactUpload = document.getElementById('compactUpload');
         const fileInput = document.getElementById('fileInput');
         const loading = document.getElementById('loading');
         const dashboard = document.getElementById('dashboard');
@@ -119,27 +125,29 @@
         let revenueChart = null;
         const ctx = document.getElementById('revenueChart').getContext('2d');
 
-        // Drag and drop functionality
-        uploadArea.addEventListener('dragover', (e) => {
+        // Drag and drop functionality on entire page
+        document.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadArea.classList.add('dragover');
+            compactUpload.style.opacity = '0.7';
+            compactUpload.style.transform = 'scale(1.05)';
         });
 
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
+        document.addEventListener('dragleave', (e) => {
+            // Only remove highlight if we're leaving the document
+            if (!e.relatedTarget) {
+                compactUpload.style.opacity = '1';
+                compactUpload.style.transform = 'scale(1)';
+            }
         });
 
-        uploadArea.addEventListener('drop', (e) => {
+        document.addEventListener('drop', (e) => {
             e.preventDefault();
-            uploadArea.classList.remove('dragover');
+            compactUpload.style.opacity = '1';
+            compactUpload.style.transform = 'scale(1)';
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFile(files[0]);
             }
-        });
-
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
         });
 
         fileInput.addEventListener('change', (e) => {
@@ -188,8 +196,10 @@
                 }
                 
                 dashboard.style.display = 'block';
+                // Show the view selector
+                document.getElementById('viewSelector').style.display = 'block';
                 loadPharmacySelector();
-                loadCurrentMonthRevenue();
+                loadCurrentPeriodRevenue();
             } else {
                 console.error('Invalid stats data:', stats);
                 showAlert('Error displaying statistics', 'error');
@@ -275,9 +285,17 @@
 
         function loadRevenueChart(selectedPharmacies = null) {
             let url = '/api/revenue-data';
+            const params = new URLSearchParams();
+            
+            // Add view type parameter
+            params.append('view_type', currentViewType);
+            
+            // Add pharmacy filter if provided
             if (selectedPharmacies && selectedPharmacies.length > 0) {
-                url += '?pharmacies=' + encodeURIComponent(selectedPharmacies.join(','));
+                params.append('pharmacies', selectedPharmacies.join(','));
             }
+            
+            url += '?' + params.toString();
             
             fetch(url)
             .then(response => response.json())
@@ -328,7 +346,7 @@
                         y: {
                             title: {
                                 display: true,
-                                text: 'Total Revenue ($)'
+                                text: 'Total Revenue (£)'
                             },
                             beginAtZero: true
                         }
@@ -394,57 +412,12 @@
             console.log('No existing data loaded');
         });
 
-        // Modal functionality
-        function showPharmaciesModal() {
-            if (current_data === null) {
-                showAlert('No data loaded. Please upload a CSV file first.', 'error');
-                return;
-            }
-            
-            // Fetch pharmacies and populate modal
-            fetch('/api/pharmacies')
-            .then(response => response.json())
-            .then(pharmacies => {
-                if (Array.isArray(pharmacies)) {
-                    populatePharmaciesList(pharmacies);
-                    document.getElementById('pharmaciesModal').style.display = 'block';
-                } else {
-                    showAlert('Error loading pharmacies list', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching pharmacies:', error);
-                showAlert('Error loading pharmacies list', 'error');
-            });
-        }
-
-        function closePharmaciesModal() {
-            document.getElementById('pharmaciesModal').style.display = 'none';
-        }
-
-        function populatePharmaciesList(pharmacies) {
-            const listContainer = document.getElementById('pharmaciesList');
-            listContainer.innerHTML = '';
-            
-            pharmacies.forEach((pharmacy, index) => {
-                const pharmacyItem = document.createElement('div');
-                pharmacyItem.className = 'pharmacy-item';
-                pharmacyItem.innerHTML = `
-                    <span class="pharmacy-number">${index + 1}</span>
-                    <span class="pharmacy-name">${pharmacy}</span>
-                `;
-                listContainer.appendChild(pharmacyItem);
-            });
-        }
-
+        // Modal functionality (removed pharmacies modal functions - now using sidebar)
+        
         // Close modal when clicking outside of it
         window.onclick = function(event) {
-            const pharmaciesModal = document.getElementById('pharmaciesModal');
             const revenueModal = document.getElementById('monthlyRevenueModal');
             
-            if (event.target === pharmaciesModal) {
-                closePharmaciesModal();
-            }
             if (event.target === revenueModal) {
                 closeMonthlyRevenueModal();
             }
@@ -452,7 +425,49 @@
 
         // Make current_data accessible for modal check
         let current_data = null;
-        let currentSelectedMonth = null;
+        let currentSelectedPeriod = null;
+        let currentViewType = 'month';
+
+        // View Type Change Handler
+        function changeViewType() {
+            const viewType = document.getElementById('viewType').value;
+            currentViewType = viewType;
+            
+            // Update labels based on view type
+            updateViewLabels(viewType);
+            
+            // Reload revenue data for the new view type
+            loadCurrentPeriodRevenue();
+            
+            // Update chart if pharmacy selector is loaded
+            if (document.querySelector('#pharmacyCheckboxes').children.length > 0) {
+                updateChartWithSelection();
+            }
+        }
+
+        function updateViewLabels(viewType) {
+            const cardLabel = document.getElementById('monthlyRevenueLabel');
+            const modalTitle = document.querySelector('#monthlyRevenueModal .modal-header h2');
+            const modalSubtitle = document.querySelector('.month-selector h4');
+            
+            switch(viewType) {
+                case 'month':
+                    if (cardLabel) cardLabel.textContent = 'Current Live Month Revenue';
+                    if (modalTitle) modalTitle.textContent = 'Select Month for Revenue';
+                    if (modalSubtitle) modalSubtitle.textContent = 'Select Different Month:';
+                    break;
+                case 'fiscal_year':
+                    if (cardLabel) cardLabel.textContent = 'Current Fiscal Year Revenue';
+                    if (modalTitle) modalTitle.textContent = 'Select Fiscal Year for Revenue';
+                    if (modalSubtitle) modalSubtitle.textContent = 'Select Different Fiscal Year:';
+                    break;
+                case 'quarter':
+                    if (cardLabel) cardLabel.textContent = 'Current Quarter Revenue';
+                    if (modalTitle) modalTitle.textContent = 'Select Quarter for Revenue';
+                    if (modalSubtitle) modalSubtitle.textContent = 'Select Different Quarter:';
+                    break;
+            }
+        }
 
         // Monthly Revenue Modal Functions
         function showMonthlyRevenueModal() {
@@ -461,20 +476,20 @@
                 return;
             }
             
-            // Fetch available months and current month revenue
-            fetch('/api/monthly-revenue')
+            // Fetch available periods and current period revenue
+            fetch(`/api/revenue-by-period?view_type=${currentViewType}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    showAlert('Error loading monthly revenue data: ' + data.error, 'error');
+                    showAlert('Error loading revenue data: ' + data.error, 'error');
                 } else {
-                    populateMonthsList(data.months, data.current_month, data.current_revenue);
+                    populatePeriodsList(data.periods, data.current_period, data.current_revenue);
                     document.getElementById('monthlyRevenueModal').style.display = 'block';
                 }
             })
             .catch(error => {
-                console.error('Error fetching monthly revenue:', error);
-                showAlert('Error loading monthly revenue data', 'error');
+                console.error('Error fetching revenue data:', error);
+                showAlert('Error loading revenue data', 'error');
             });
         }
 
@@ -482,63 +497,162 @@
             document.getElementById('monthlyRevenueModal').style.display = 'none';
         }
 
-        function populateMonthsList(months, currentMonth, currentRevenue) {
-            currentSelectedMonth = currentMonth;
+        function populatePeriodsList(periods, currentPeriod, currentRevenue) {
+            currentSelectedPeriod = currentPeriod;
+            
+            // Find current period data for percentage change
+            const currentPeriodData = periods.find(p => p.period === currentPeriod);
             
             // Update current selection display
-            document.getElementById('selectedMonthDisplay').textContent = currentMonth;
-            document.getElementById('selectedMonthRevenue').textContent = '$' + currentRevenue.toLocaleString();
+            document.getElementById('selectedMonthDisplay').textContent = currentPeriod;
+            document.getElementById('selectedMonthRevenue').textContent = '£' + currentRevenue.toLocaleString();
             
-            // Populate months grid
-            const monthsList = document.getElementById('monthsList');
-            monthsList.innerHTML = '';
+            // Update main card percentage change if current period data exists
+            if (currentPeriodData) {
+                const revenueChangeEl = document.getElementById('revenueChange');
+                const changeIconEl = document.getElementById('changeIcon');
+                const changePercentageEl = document.getElementById('changePercentage');
+                
+                if (currentPeriodData.percentage_change !== null) {
+                    const icon = currentPeriodData.change_direction === 'increase' ? '↗' : '↘';
+                    const colorClass = currentPeriodData.change_direction === 'increase' ? 'increase' : 'decrease';
+                    const changeText = currentPeriodData.change_direction === 'increase' ? 'increase' : 'decrease';
+                    const previousPeriodText = currentViewType === 'month' ? 'previous month' : 
+                                            currentViewType === 'fiscal_year' ? 'previous fiscal year' : 'previous quarter';
+                    
+                    changeIconEl.textContent = icon;
+                    changePercentageEl.textContent = Math.abs(currentPeriodData.percentage_change) + '%';
+                    
+                    revenueChangeEl.className = `revenue-change ${colorClass}`;
+                    revenueChangeEl.title = `${Math.abs(currentPeriodData.percentage_change)}% ${changeText} from ${previousPeriodText}`;
+                    revenueChangeEl.style.display = 'flex';
+                } else {
+                    revenueChangeEl.style.display = 'none';
+                }
+            }
             
-            months.forEach(monthData => {
-                const monthButton = document.createElement('button');
-                monthButton.className = 'month-button';
-                if (monthData.month === currentMonth) {
-                    monthButton.classList.add('selected');
+            // Populate periods grid
+            const periodsList = document.getElementById('monthsList');
+            periodsList.innerHTML = '';
+            
+            periods.forEach(periodData => {
+                const periodButton = document.createElement('button');
+                periodButton.className = 'month-button';
+                if (periodData.period === currentPeriod) {
+                    periodButton.classList.add('selected');
                 }
                 
-                monthButton.innerHTML = `
-                    <div class="month-name">${monthData.month}</div>
-                    <div class="month-revenue">$${monthData.revenue.toLocaleString()}</div>
+                // Create percentage change display
+                let changeDisplay = '';
+                if (periodData.percentage_change !== null) {
+                    const changeClass = periodData.change_direction === 'increase' ? 'increase' : 'decrease';
+                    const changeIcon = periodData.change_direction === 'increase' ? '↗' : '↘';
+                    const changeText = periodData.change_direction === 'increase' ? 'increase' : 'decrease';
+                    const previousPeriodText = currentViewType === 'month' ? 'previous month' : 
+                                            currentViewType === 'fiscal_year' ? 'previous fiscal year' : 'previous quarter';
+                    changeDisplay = `
+                        <div class="month-change ${changeClass}" title="${Math.abs(periodData.percentage_change)}% ${changeText} from ${previousPeriodText}">
+                            <span class="change-icon">${changeIcon}</span>
+                            <span>${Math.abs(periodData.percentage_change)}%</span>
+                        </div>
+                    `;
+                }
+                
+                periodButton.innerHTML = `
+                    <div class="month-name">${periodData.period}</div>
+                    <div class="month-revenue">£${periodData.revenue.toLocaleString()}</div>
+                    ${changeDisplay}
                 `;
                 
-                monthButton.onclick = () => selectMonth(monthData.month, monthData.revenue);
-                monthsList.appendChild(monthButton);
+                periodButton.onclick = () => selectPeriod(periodData.period, periodData.revenue, periodData.percentage_change, periodData.change_direction);
+                periodsList.appendChild(periodButton);
             });
         }
 
-        function selectMonth(month, revenue) {
-            currentSelectedMonth = month;
+        function selectPeriod(period, revenue, percentageChange, changeDirection) {
+            currentSelectedPeriod = period;
             
             // Update display
-            document.getElementById('selectedMonthDisplay').textContent = month;
-            document.getElementById('selectedMonthRevenue').textContent = '$' + revenue.toLocaleString();
+            document.getElementById('selectedMonthDisplay').textContent = period;
+            document.getElementById('selectedMonthRevenue').textContent = '£' + revenue.toLocaleString();
             
             // Update main scorecard
-            document.getElementById('monthlyRevenue').textContent = '$' + revenue.toLocaleString();
-            document.getElementById('monthlyRevenueLabel').textContent = month + ' Revenue';
+            document.getElementById('monthlyRevenue').textContent = '£' + revenue.toLocaleString();
+            document.getElementById('monthlyRevenueLabel').textContent = period + ' Revenue';
+            
+            // Update percentage change in main card
+            const revenueChangeEl = document.getElementById('revenueChange');
+            const changeIconEl = document.getElementById('changeIcon');
+            const changePercentageEl = document.getElementById('changePercentage');
+            
+                                     if (percentageChange !== null) {
+                const icon = changeDirection === 'increase' ? '↗' : '↘';
+                const colorClass = changeDirection === 'increase' ? 'increase' : 'decrease';
+                const changeText = changeDirection === 'increase' ? 'increase' : 'decrease';
+                const previousPeriodText = currentViewType === 'month' ? 'previous month' : 
+                                        currentViewType === 'fiscal_year' ? 'previous fiscal year' : 'previous quarter';
+                
+                changeIconEl.textContent = icon;
+                changePercentageEl.textContent = Math.abs(percentageChange) + '%';
+                
+                revenueChangeEl.className = `revenue-change ${colorClass}`;
+                revenueChangeEl.title = `${Math.abs(percentageChange)}% ${changeText} from ${previousPeriodText}`;
+                revenueChangeEl.style.display = 'flex';
+            } else {
+                revenueChangeEl.style.display = 'none';
+            }
             
             // Update button selection
             document.querySelectorAll('.month-button').forEach(btn => btn.classList.remove('selected'));
             event.target.closest('.month-button').classList.add('selected');
         }
 
-        function loadCurrentMonthRevenue() {
+        function loadCurrentPeriodRevenue() {
             if (current_data === null) return;
             
-            fetch('/api/monthly-revenue')
+            fetch(`/api/revenue-by-period?view_type=${currentViewType}`)
             .then(response => response.json())
             .then(data => {
                 if (!data.error) {
-                    document.getElementById('monthlyRevenue').textContent = '$' + data.current_revenue.toLocaleString();
-                    document.getElementById('monthlyRevenueLabel').textContent = data.current_month + ' Revenue';
+                    document.getElementById('monthlyRevenue').textContent = '£' + data.current_revenue.toLocaleString();
+                    
+                    // Update label based on view type
+                    let labelSuffix = '';
+                    if (currentViewType === 'month') {
+                        labelSuffix = ' (Current Live Month)';
+                    } else if (currentViewType === 'fiscal_year') {
+                        labelSuffix = ' (Current Fiscal Year)';
+                    } else if (currentViewType === 'quarter') {
+                        labelSuffix = ' (Current Quarter)';
+                    }
+                    document.getElementById('monthlyRevenueLabel').textContent = data.live_period + ' Revenue' + labelSuffix;
+                    
+                    // Find current period data for percentage change
+                    const currentPeriodData = data.periods.find(p => p.period === data.current_period);
+                    const revenueChangeEl = document.getElementById('revenueChange');
+                    const changeIconEl = document.getElementById('changeIcon');
+                    const changePercentageEl = document.getElementById('changePercentage');
+                    
+                    if (currentPeriodData && currentPeriodData.percentage_change !== null) {
+                        const icon = currentPeriodData.change_direction === 'increase' ? '↗' : '↘';
+                        const colorClass = currentPeriodData.change_direction === 'increase' ? 'increase' : 'decrease';
+                        const changeText = currentPeriodData.change_direction === 'increase' ? 'increase' : 'decrease';
+                        const previousPeriodText = currentViewType === 'month' ? 'previous month' : 
+                                                currentViewType === 'fiscal_year' ? 'previous fiscal year' : 'previous quarter';
+                        
+                        changeIconEl.textContent = icon;
+                        changePercentageEl.textContent = Math.abs(currentPeriodData.percentage_change) + '%';
+                        
+                        revenueChangeEl.className = `revenue-change ${colorClass}`;
+                        revenueChangeEl.title = `${Math.abs(currentPeriodData.percentage_change)}% ${changeText} from ${previousPeriodText}`;
+                        revenueChangeEl.style.display = 'flex';
+                    } else {
+                        revenueChangeEl.style.display = 'none';
+                    }
                 }
             })
             .catch(error => {
-                console.error('Error loading current month revenue:', error);
+                console.error('Error loading current period revenue:', error);
             });
         }
     </script>
