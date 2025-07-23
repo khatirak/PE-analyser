@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { X, CheckCircle, Circle } from 'lucide-react';
+import { X, CheckCircle, Circle, ChevronUp, ChevronDown } from 'lucide-react';
 import { fetchPharmacies } from '../../utils/api';
 
 function PharmacyModal({ isOpen, onClose }) {
   const [pharmacies, setPharmacies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   useEffect(() => {
     if (isOpen) {
@@ -45,6 +46,93 @@ function PharmacyModal({ isOpen, onClose }) {
     return status === 'acquired' ? 'text-green-600' : 'text-yellow-600';
   };
 
+  // Sorting functions
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortedPharmacies = () => {
+    if (!sortConfig.key) return pharmacies;
+
+    return [...pharmacies].sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+
+      // Handle null/undefined values
+      if (!aValue) aValue = '';
+      if (!bValue) bValue = '';
+
+      // Handle status sorting (acquired comes before pipeline)
+      if (sortConfig.key === 'status') {
+        if (aValue === 'acquired' && bValue === 'pipeline') {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue === 'pipeline' && bValue === 'acquired') {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+      }
+
+      // Handle date sorting
+      if (sortConfig.key === 'acquisition_date') {
+        // Put 'Not acquired' at the end
+        if (aValue === 'Not acquired' && bValue !== 'Not acquired') {
+          return 1;
+        }
+        if (bValue === 'Not acquired' && aValue !== 'Not acquired') {
+          return -1;
+        }
+        if (aValue === 'Not acquired' && bValue === 'Not acquired') {
+          return 0;
+        }
+        
+        // Convert date strings to Date objects for proper comparison
+        try {
+          const aDate = new Date(aValue);
+          const bDate = new Date(bValue);
+          
+          if (aDate < bDate) {
+            return sortConfig.direction === 'asc' ? -1 : 1;
+          }
+          if (aDate > bDate) {
+            return sortConfig.direction === 'asc' ? 1 : -1;
+          }
+          return 0;
+        } catch (error) {
+          // Fallback to string comparison if date parsing fails
+          if (aValue < bValue) {
+            return sortConfig.direction === 'asc' ? -1 : 1;
+          }
+          if (aValue > bValue) {
+            return sortConfig.direction === 'asc' ? 1 : -1;
+          }
+          return 0;
+        }
+      }
+
+      // String comparison
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  const getSortIcon = (columnKey) => {
+    if (sortConfig.key !== columnKey) {
+      return <ChevronUp className="h-4 w-4 text-gray-400" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ChevronUp className="h-4 w-4 text-gray-600" />
+      : <ChevronDown className="h-4 w-4 text-gray-600" />;
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
@@ -78,22 +166,46 @@ function PharmacyModal({ isOpen, onClose }) {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Status</span>
+                        {getSortIcon('status')}
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Pharmacy Name
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Pharmacy Name</span>
+                        {getSortIcon('name')}
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cluster
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('cluster')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Cluster</span>
+                        {getSortIcon('cluster')}
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Acquisition Date
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('acquisition_date')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Acquisition Date</span>
+                        {getSortIcon('acquisition_date')}
+                      </div>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {pharmacies.map((pharmacy, index) => (
+                  {getSortedPharmacies().map((pharmacy, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">

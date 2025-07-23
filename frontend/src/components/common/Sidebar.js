@@ -12,6 +12,9 @@ function Sidebar() {
   return (
     <div className="sidebar">
       <div className="sidebar-content">
+        {/* Spacer to push pharmacy selector down */}
+        <div className="h-96"></div>
+        
         <div className="sidebar-section">
           <h3 className="sidebar-title">
             Select Pharmacies

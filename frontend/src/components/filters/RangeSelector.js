@@ -4,37 +4,82 @@ import { useDataContext } from '../../context/DataContext';
 function RangeSelector() {
   const { state, dispatch } = useDataContext();
 
-  // Set default ranges when component mounts and update end dates to current
-  useEffect(() => {
-    const setDefaultRanges = () => {
-      const currentDate = new Date();
-      const startDate = new Date('2024-04-01'); // Apr-24
+  console.log('RangeSelector mounted, current state:', state.dateRange);
+
+  // Define setDefaultRanges function
+  const setDefaultRanges = () => {
+    console.log('Setting default ranges...');
+    const currentDate = new Date();
+    const startDate = new Date('2024-04-01'); // Apr-24
+    
+    // Set month range: start from Apr-24, end to current month - 1
+    if (!state.dateRange.start || !state.dateRange.end) {
+      const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
+      const startYear = startDate.getFullYear().toString().slice(-2);
+      const startValue = `${startMonth}-${startYear}`;
       
-      // Always update month range end to current month
-      const startMonth = state.dateRange.start || startDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      const endMonth = currentDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      dispatch({ type: 'SET_DATE_RANGE', payload: { start: startMonth, end: endMonth } });
+      // Set end date to current month - 1
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      const endMonth = currentMonth === 0 ? 11 : currentMonth - 1; // Handle January (month 0)
+      const endYear = currentMonth === 0 ? currentYear - 1 : currentYear;
       
-      // Always update quarter range end to current quarter
-      const startQuarter = state.quarterRange.start || '2024 Q1';
-      const currentFYQuarter = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
+      const endDate = new Date(endYear, endMonth, 1);
+      const endMonthStr = endDate.toLocaleDateString('en-US', { month: 'short' });
+      const endYearStr = endDate.getFullYear().toString().slice(-2);
+      const endValue = `${endMonthStr}-${endYearStr}`;
+      
+      console.log('Setting default date range:', { start: startValue, end: endValue });
+      dispatch({ type: 'SET_DATE_RANGE', payload: { start: startValue, end: endValue } });
+    }
+    
+    // Set quarter range: start from Q1 FY2024, end to one quarter before current
+    if (!state.quarterRange.start || !state.quarterRange.end) {
+      const startQuarter = '2024 Q1';
+      const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
       const month = currentDate.getMonth() + 1;
       const currentQ = month >= 4 && month <= 6 ? 'Q1' : 
                       month >= 7 && month <= 9 ? 'Q2' : 
                       month >= 10 && month <= 12 ? 'Q3' : 'Q4';
-      const endQuarter = `${currentFYQuarter} ${currentQ}`;
-      dispatch({ type: 'SET_QUARTER_RANGE', payload: { start: startQuarter, end: endQuarter } });
       
-      // Always update fiscal year range end to current fiscal year
-      const startFY = state.fiscalYearRange.start || '2024';
-      const currentFYFiscal = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
-      dispatch({ type: 'SET_FISCAL_YEAR_RANGE', payload: { start: startFY, end: currentFYFiscal.toString() } });
-    };
+      // Calculate one quarter before current
+      let defaultQ, defaultFY;
+      if (currentQ === 'Q1') {
+        defaultQ = 'Q4';
+        defaultFY = currentFY - 1;
+      } else {
+        const qNum = parseInt(currentQ.replace('Q', ''));
+        defaultQ = 'Q' + (qNum - 1);
+        defaultFY = currentFY;
+      }
+      const endQuarter = `${defaultFY} ${defaultQ}`;
+      dispatch({ type: 'SET_QUARTER_RANGE', payload: { start: startQuarter, end: endQuarter } });
+    }
+    
+    // Set fiscal year range: start from 2024, end to current fiscal year
+    if (!state.fiscalYearRange.start || !state.fiscalYearRange.end) {
+      const startFY = '2024';
+      const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
+      dispatch({ type: 'SET_FISCAL_YEAR_RANGE', payload: { start: startFY, end: currentFY.toString() } });
+    }
+  };
 
+  // Set default ranges when component mounts
+  useEffect(() => {
     setDefaultRanges();
-  }, [state.viewType]); // Re-run when view type changes
+  }, []); // Run only on mount
+
+  // Also set default ranges when view type changes
+  useEffect(() => {
+    if (state.viewType) {
+      console.log('View type changed, setting default ranges for:', state.viewType);
+      setDefaultRanges();
+    }
+  }, [state.viewType]);
 
   const handleDateRangeChange = (field, value) => {
+    console.log('RangeSelector - Date range change:', field, value);
+    console.log('RangeSelector - Current state:', state.dateRange);
     dispatch({ 
       type: 'SET_DATE_RANGE', 
       payload: { ...state.dateRange, [field]: value } 
@@ -67,9 +112,22 @@ function RangeSelector() {
     const startDate = new Date('2024-04-01'); // Apr-24
     
     if (state.viewType === 'month') {
-      const startMonth = startDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      const endMonth = currentDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      dispatch({ type: 'SET_DATE_RANGE', payload: { start: startMonth, end: endMonth } });
+      const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
+      const startYear = startDate.getFullYear().toString().slice(-2);
+      const startValue = `${startMonth}-${startYear}`;
+      
+      // Set end date to current month - 1
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      const endMonth = currentMonth === 0 ? 11 : currentMonth - 1; // Handle January (month 0)
+      const endYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+      
+      const endDate = new Date(endYear, endMonth, 1);
+      const endMonthStr = endDate.toLocaleDateString('en-US', { month: 'short' });
+      const endYearStr = endDate.getFullYear().toString().slice(-2);
+      const endValue = `${endMonthStr}-${endYearStr}`;
+      
+      dispatch({ type: 'SET_DATE_RANGE', payload: { start: startValue, end: endValue } });
     } else if (state.viewType === 'quarter') {
       const startQuarter = '2024 Q1';
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
@@ -77,7 +135,18 @@ function RangeSelector() {
       const currentQ = month >= 4 && month <= 6 ? 'Q1' : 
                       month >= 7 && month <= 9 ? 'Q2' : 
                       month >= 10 && month <= 12 ? 'Q3' : 'Q4';
-      const endQuarter = `${currentFY} ${currentQ}`;
+      
+      // Calculate one quarter before current
+      let defaultQ, defaultFY;
+      if (currentQ === 'Q1') {
+        defaultQ = 'Q4';
+        defaultFY = currentFY - 1;
+      } else {
+        const qNum = parseInt(currentQ.replace('Q', ''));
+        defaultQ = 'Q' + (qNum - 1);
+        defaultFY = currentFY;
+      }
+      const endQuarter = `${defaultFY} ${defaultQ}`;
       dispatch({ type: 'SET_QUARTER_RANGE', payload: { start: startQuarter, end: endQuarter } });
     } else if (state.viewType === 'fiscal_year') {
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
@@ -98,8 +167,10 @@ function RangeSelector() {
     while (date.getFullYear() < currentDate.getFullYear() || 
            (date.getFullYear() === currentDate.getFullYear() && date.getMonth() <= currentDate.getMonth())) {
       const monthStr = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      // Convert to MMM-YY format for backend compatibility
-      const value = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      // Convert to MMM-YY format for backend compatibility (with hyphen)
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      const year = date.getFullYear().toString().slice(-2);
+      const value = `${month}-${year}`;
       months.push({ value, display: monthStr });
       date.setMonth(date.getMonth() + 1);
     }

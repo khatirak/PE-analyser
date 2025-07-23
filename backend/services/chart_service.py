@@ -23,16 +23,33 @@ class ChartService:
         if date_range_start and date_range_end:
             start_date = parse_date(date_range_start)
             end_date = parse_date(date_range_end)
+            print(f"Parsed dates - start: {start_date}, end: {end_date}")
             if start_date and end_date:
                 print(f"Using specified date range: {start_date} to {end_date}")
                 # Generate complete date range for x-axis
                 date_range = pd.date_range(start=start_date, end=end_date, freq='MS')  # Month start
                 labels = [format_date(date) for date in date_range]
+                print(f"Generated labels: {labels}")
+                
+                # Filter labels to only include those that have data
+                available_dates = set(revenue_data['Date'].dt.strftime('%b-%y'))
+                print(f"Available dates in data: {sorted(available_dates)}")
+                filtered_labels = [label for label in labels if label in available_dates]
+                print(f"Filtered labels (with data): {filtered_labels}")
+                
+                if filtered_labels:
+                    labels = filtered_labels
+                else:
+                    print("No matching dates found, using all available dates")
+                    dates = sorted(revenue_data['Date'].unique())
+                    labels = [format_date(date) for date in dates]
             else:
+                print("Failed to parse dates, falling back to data-based dates")
                 # Fallback to data-based dates
                 dates = sorted(revenue_data['Date'].unique())
                 labels = [format_date(date) for date in dates]
         else:
+            print("No date range specified, using data-based dates")
             # No date range specified, use data-based dates
             dates = sorted(revenue_data['Date'].unique())
             labels = [format_date(date) for date in dates]
@@ -51,6 +68,7 @@ class ChartService:
                 revenue_data = revenue_data[revenue_data['Date'] <= end_date]
         
         print(f"Data after filtering: {len(revenue_data)} rows")
+        print(f"Available dates after filtering: {sorted(revenue_data['Date'].dt.strftime('%b-%y').unique())}")
         
         # Get pharmacies
         pharmacies = revenue_data['Pharmacy'].unique()

@@ -58,9 +58,11 @@ export const useChartData = () => {
   ]);
 
   const loadChartData = useCallback(async (params) => {
+    console.log('useChartData - Loading chart data with params:', params);
     setLoading(true);
     try {
       const data = await fetchChartData(params);
+      console.log('useChartData - Received chart data:', data);
       dispatch({ type: 'SET_CHART_DATA', payload: data });
     } catch (error) {
       console.error('Error loading chart data:', error);

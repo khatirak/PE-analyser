@@ -4,26 +4,47 @@ from config import Config
 
 def parse_date(date_str):
     """Parse date string in various formats"""
+    print(f"parse_date called with: '{date_str}'")
     if pd.isna(date_str) or date_str == '':
+        print("Empty or NaN date string")
         return None
     
     try:
         # Try the configured format first (MMM-YY)
-        return pd.to_datetime(date_str, format=Config.DATE_FORMAT)
-    except:
+        result = pd.to_datetime(date_str, format=Config.DATE_FORMAT)
+        print(f"Successfully parsed with format {Config.DATE_FORMAT}: {result}")
+        return result
+    except Exception as e:
+        print(f"Failed to parse with format {Config.DATE_FORMAT}: {e}")
         try:
-            # Try DD MMMM YYYY format (e.g., "01 April 2024")
-            return pd.to_datetime(date_str, format='%d %B %Y')
-        except:
+            # Try MMM YY format (e.g., "May 24")
+            result = pd.to_datetime(date_str, format='%b %y')
+            print(f"Successfully parsed with format '%b %y': {result}")
+            return result
+        except Exception as e:
+            print(f"Failed to parse with format '%b %y': {e}")
             try:
-                # Try DD MMM YYYY format (e.g., "01 Apr 2024")
-                return pd.to_datetime(date_str, format='%d %b %Y')
-            except:
+                # Try DD MMMM YYYY format (e.g., "01 April 2024")
+                result = pd.to_datetime(date_str, format='%d %B %Y')
+                print(f"Successfully parsed with format '%d %B %Y': {result}")
+                return result
+            except Exception as e:
+                print(f"Failed to parse with format '%d %B %Y': {e}")
                 try:
-                    # Try standard pandas parsing
-                    return pd.to_datetime(date_str)
-                except:
-                    return None
+                    # Try DD MMM YYYY format (e.g., "01 Apr 2024")
+                    result = pd.to_datetime(date_str, format='%d %b %Y')
+                    print(f"Successfully parsed with format '%d %b %Y': {result}")
+                    return result
+                except Exception as e:
+                    print(f"Failed to parse with format '%d %b %Y': {e}")
+                    try:
+                        # Try standard pandas parsing
+                        result = pd.to_datetime(date_str)
+                        print(f"Successfully parsed with standard pandas: {result}")
+                        return result
+                    except Exception as e:
+                        print(f"Failed to parse with standard pandas: {e}")
+                        return None
 
 def format_date(date_obj):
     """Format date object to MMM-YY format"""
@@ -40,9 +61,20 @@ def quarter_to_num(quarter):
     quarter_map = {'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4}
     return quarter_map.get(quarter, 0)
 
-def sort_quarter_key(row):
+def sort_quarter_key(quarter_str):
     """Sort key for quarter sorting"""
-    return (row['Fiscal_Year'], quarter_to_num(row['Quarter']))
+    # Handle quarter strings in format "YYYY QX"
+    if isinstance(quarter_str, str) and ' ' in quarter_str:
+        parts = quarter_str.split(' ')
+        if len(parts) == 2:
+            try:
+                fiscal_year = int(parts[0])
+                quarter = parts[1]
+                return (fiscal_year, quarter_to_num(quarter))
+            except (ValueError, IndexError):
+                return (0, 0)
+    # Fallback for other formats
+    return (0, 0)
 
 def is_acquired_pharmacy(acquisition_date):
     """Check if pharmacy is acquired based on acquisition date"""

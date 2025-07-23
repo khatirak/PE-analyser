@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDataContext } from '../../context/DataContext';
-import { CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle, Circle, Building2, Users } from 'lucide-react';
 
 function PharmacySelector() {
   const { state, dispatch } = useDataContext();
+  const [selectionMode, setSelectionMode] = useState(state.pharmacySelectionMode || 'pharmacies'); // 'pharmacies' or 'clusters'
 
   const handlePharmacyToggle = (pharmacyName) => {
     const isSelected = state.selectedPharmacies.includes(pharmacyName);
@@ -18,8 +19,45 @@ function PharmacySelector() {
     dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: newSelected });
   };
 
+  const handleClusterToggle = (clusterName) => {
+    // Get all pharmacies in this cluster
+    const cluster = state.clusters.find(c => c.name === clusterName);
+    if (!cluster) return;
+
+    const clusterPharmacyNames = cluster.pharmacies.map(p => p.name);
+    const currentlySelectedInCluster = clusterPharmacyNames.filter(name => 
+      state.selectedPharmacies.includes(name)
+    );
+
+    let newSelected;
+    if (currentlySelectedInCluster.length === clusterPharmacyNames.length) {
+      // All pharmacies in cluster are selected, so deselect all
+      newSelected = state.selectedPharmacies.filter(name => 
+        !clusterPharmacyNames.includes(name)
+      );
+    } else {
+      // Not all pharmacies in cluster are selected, so select all
+      newSelected = [...state.selectedPharmacies];
+      clusterPharmacyNames.forEach(name => {
+        if (!newSelected.includes(name)) {
+          newSelected.push(name);
+        }
+      });
+    }
+
+    dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: newSelected });
+  };
+
   const selectAll = () => {
-    dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: state.pharmacies.map(p => p.name) });
+    if (selectionMode === 'pharmacies') {
+      dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: state.pharmacies.map(p => p.name) });
+    } else {
+      // Select all pharmacies from all clusters
+      const allPharmacyNames = state.clusters.flatMap(cluster => 
+        cluster.pharmacies.map(p => p.name)
+      );
+      dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: allPharmacyNames });
+    }
   };
 
   const clearAll = () => {
@@ -42,8 +80,65 @@ function PharmacySelector() {
   const acquiredPharmacies = state.pharmacies.filter(p => p.status === 'acquired');
   const pipelinePharmacies = state.pharmacies.filter(p => p.status === 'pipeline');
 
+  // Helper function to check if a cluster is fully selected
+  const isClusterFullySelected = (clusterName) => {
+    const cluster = state.clusters.find(c => c.name === clusterName);
+    if (!cluster) return false;
+    
+    const clusterPharmacyNames = cluster.pharmacies.map(p => p.name);
+    return clusterPharmacyNames.every(name => state.selectedPharmacies.includes(name));
+  };
+
+  // Helper function to check if a cluster is partially selected
+  const isClusterPartiallySelected = (clusterName) => {
+    const cluster = state.clusters.find(c => c.name === clusterName);
+    if (!cluster) return false;
+    
+    const clusterPharmacyNames = cluster.pharmacies.map(p => p.name);
+    const selectedInCluster = clusterPharmacyNames.filter(name => 
+      state.selectedPharmacies.includes(name)
+    );
+    
+    return selectedInCluster.length > 0 && selectedInCluster.length < clusterPharmacyNames.length;
+  };
+
   return (
     <div className="space-y-4">
+      {/* Selection Mode Toggle */}
+      <div className="flex items-center space-x-4">
+        <span className="text-sm font-medium text-gray-700">Selection Mode:</span>
+        <div className="flex bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => {
+              setSelectionMode('pharmacies');
+              dispatch({ type: 'SET_PHARMACY_SELECTION_MODE', payload: 'pharmacies' });
+            }}
+            className={`flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              selectionMode === 'pharmacies'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            <span>Pharmacies</span>
+          </button>
+          <button
+            onClick={() => {
+              setSelectionMode('clusters');
+              dispatch({ type: 'SET_PHARMACY_SELECTION_MODE', payload: 'clusters' });
+            }}
+            className={`flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              selectionMode === 'clusters'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>Clusters</span>
+          </button>
+        </div>
+      </div>
+
       {/* Acquisition Filter Toggle */}
       <div className="flex items-center space-x-3">
         <label className="flex items-center cursor-pointer">
@@ -92,33 +187,53 @@ function PharmacySelector() {
         </div>
       </div>
 
-      {/* Pharmacy List */}
+      {/* Selection Content */}
       <div className="space-y-2 max-h-96 overflow-y-auto">
-        {/* Acquired Pharmacies */}
-        {acquiredPharmacies.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Acquired Pharmacies</h4>
-            {acquiredPharmacies.map(pharmacy => (
-              <PharmacyItem
-                key={pharmacy.name}
-                pharmacy={pharmacy}
-                isSelected={state.selectedPharmacies.includes(pharmacy.name)}
-                onToggle={handlePharmacyToggle}
-              />
-            ))}
-          </div>
-        )}
+        {selectionMode === 'pharmacies' ? (
+          // Individual Pharmacy Selection
+          <>
+            {/* Acquired Pharmacies */}
+            {acquiredPharmacies.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Acquired Pharmacies</h4>
+                {acquiredPharmacies.map(pharmacy => (
+                  <PharmacyItem
+                    key={pharmacy.name}
+                    pharmacy={pharmacy}
+                    isSelected={state.selectedPharmacies.includes(pharmacy.name)}
+                    onToggle={handlePharmacyToggle}
+                  />
+                ))}
+              </div>
+            )}
 
-        {/* Pipeline Pharmacies */}
-        {pipelinePharmacies.length > 0 && (
+            {/* Pipeline Pharmacies */}
+            {pipelinePharmacies.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Pipeline Pharmacies</h4>
+                {pipelinePharmacies.map(pharmacy => (
+                  <PharmacyItem
+                    key={pharmacy.name}
+                    pharmacy={pharmacy}
+                    isSelected={state.selectedPharmacies.includes(pharmacy.name)}
+                    onToggle={handlePharmacyToggle}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          // Cluster Selection
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Pipeline Pharmacies</h4>
-            {pipelinePharmacies.map(pharmacy => (
-              <PharmacyItem
-                key={pharmacy.name}
-                pharmacy={pharmacy}
-                isSelected={state.selectedPharmacies.includes(pharmacy.name)}
-                onToggle={handlePharmacyToggle}
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Clusters</h4>
+            {state.clusters.map(cluster => (
+              <ClusterItem
+                key={cluster.name}
+                cluster={cluster}
+                isFullySelected={isClusterFullySelected(cluster.name)}
+                isPartiallySelected={isClusterPartiallySelected(cluster.name)}
+                selectedPharmacies={state.selectedPharmacies}
+                onToggle={handleClusterToggle}
               />
             ))}
           </div>
@@ -146,6 +261,52 @@ function PharmacyItem({ pharmacy, isSelected, onToggle }) {
         <span className="text-xs text-gray-500">({pharmacy.acquisition_date})</span>
       )}
     </label>
+  );
+}
+
+function ClusterItem({ cluster, isFullySelected, isPartiallySelected, selectedPharmacies, onToggle }) {
+  const getSelectionIcon = () => {
+    if (isFullySelected) {
+      return <CheckCircle className="h-4 w-4 text-success-500" />;
+    } else if (isPartiallySelected) {
+      return <div className="h-4 w-4 border-2 border-success-500 rounded-sm bg-success-500 bg-opacity-20" />;
+    } else {
+      return <Circle className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const selectedCount = cluster.pharmacies.filter(p => 
+    selectedPharmacies.includes(p.name)
+  ).length;
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-3">
+      <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded -m-2">
+        <input
+          type="checkbox"
+          checked={isFullySelected}
+          ref={(input) => {
+            if (input) {
+              input.indeterminate = isPartiallySelected;
+            }
+          }}
+          onChange={() => onToggle(cluster.name)}
+          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+        />
+        <Users className="h-4 w-4 text-purple-500" />
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-900">{cluster.name}</span>
+            <span className="text-xs text-gray-500">
+              {selectedCount}/{cluster.pharmacy_count} selected
+            </span>
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {cluster.pharmacies.map(p => p.name).join(', ')}
+          </div>
+        </div>
+      </label>
+    </div>
   );
 }
 

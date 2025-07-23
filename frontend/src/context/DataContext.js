@@ -19,7 +19,8 @@ const initialState = {
   fiscalYearRange: { start: '', end: '' },
   chartData: null,
   loading: false,
-  error: null
+  error: null,
+  pharmacySelectionMode: 'pharmacies' // 'pharmacies' or 'clusters'
 };
 
 function dataReducer(state, action) {
@@ -52,6 +53,8 @@ function dataReducer(state, action) {
       return { ...state, acquisitionDate: action.payload };
     case 'SET_CHART_DATA':
       return { ...state, chartData: action.payload };
+    case 'SET_PHARMACY_SELECTION_MODE':
+      return { ...state, pharmacySelectionMode: action.payload };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
     case 'SET_ERROR':
