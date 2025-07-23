@@ -5,8 +5,9 @@ import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import tempfile
-
-app = Flask(__name__, template_folder='../templates', static_folder='../static')
+app = Flask(__name__, 
+           template_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates'),
+           static_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static'))
 CORS(app)
 
 # Configuration for serverless environment
@@ -177,10 +178,5 @@ def get_revenue_data():
     except Exception as e:
         return jsonify({'error': f'Error getting revenue data: {str(e)}'}), 400
 
-# This is the entry point for Vercel
-def handler(request):
-    return app(request.environ, lambda status, headers: None)
-
-# For local development
-if __name__ == '__main__':
-    app.run(debug=True, port=5001) 
+# Export the Flask app for Vercel
+# The variable must be named 'app' for Vercel to recognize it 
