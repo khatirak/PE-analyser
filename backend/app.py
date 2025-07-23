@@ -1,30 +1,22 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import pandas as pd
 import os
-from werkzeug.utils import secure_filename
 from datetime import datetime
-import tempfile
-app = Flask(__name__, 
-           template_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates'),
-           static_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static'))
+import json
+
+app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
 CORS(app)
 
-# Configuration for serverless environment
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
-# Global variable to store the current dataset
+# Global variable to store current data
 current_data = None
 
-ALLOWED_EXTENSIONS = {'csv'}
-
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'csv'
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+def serve():
+    return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -159,6 +151,8 @@ def get_revenue_data():
         date_range_end = request.args.get('date_range_end', '')
         quarter_range_start = request.args.get('quarter_range_start', '')
         quarter_range_end = request.args.get('quarter_range_end', '')
+        fiscal_year_range_start = request.args.get('fiscal_year_range_start', '')
+        fiscal_year_range_end = request.args.get('fiscal_year_range_end', '')
         
         selected_pharmacies = []
         if selected_pharmacies_param:
@@ -167,13 +161,20 @@ def get_revenue_data():
         # Parse acquisition dates if provided
         acquisition_dates = {}
         try:
-            import json
             acquisition_dates = json.loads(acquisition_dates_param)
         except:
             acquisition_dates = {}
         
+        print(f"=== REVENUE DATA DEBUG ===")
+        print(f"View type requested: {view_type}")
+        print(f"Total data rows: {len(current_data)}")
+        print(f"Available metrics: {current_data['Metric'].unique()}")
+        print(f"Available columns: {current_data.columns.tolist()}")
+        
         # Filter for Total Revenue metric only
         revenue_data = current_data[current_data['Metric'] == 'Total Revenue'].copy()
+        
+        print(f"Total Revenue data rows: {len(revenue_data)}")
         
         if revenue_data.empty:
             return jsonify({'error': 'No Total Revenue data found'}), 400
@@ -186,21 +187,25 @@ def get_revenue_data():
         
         # Apply acquisition date filter if enabled
         if acquisition_filter and acquisition_dates:
-            revenue_data = _apply_acquisition_filter(revenue_data, acquisition_dates)
+            revenue_data = _apply_acquisition_filter_app(revenue_data, acquisition_dates)
+        
+        print(f"Final revenue data rows before chart creation: {len(revenue_data)}")
+        print(f"Selected pharmacies: {selected_pharmacies}")
+        print(f"Acquisition filter enabled: {acquisition_filter}")
         
         if view_type == 'month':
-            return _create_monthly_chart_data(revenue_data, date_range_start, date_range_end)
+            return _create_monthly_chart_data_app(revenue_data, date_range_start, date_range_end)
         elif view_type == 'fiscal_year':
-            return _create_fiscal_year_chart_data(revenue_data)
+            return _create_fiscal_year_chart_data_app(revenue_data, fiscal_year_range_start, fiscal_year_range_end)
         elif view_type == 'quarter':
-            return _create_quarter_chart_data(revenue_data, quarter_range_start, quarter_range_end)
+            return _create_quarter_chart_data_app(revenue_data, quarter_range_start, quarter_range_end)
         else:
             return jsonify({'error': 'Invalid view type'}), 400
         
     except Exception as e:
         return jsonify({'error': f'Error getting revenue data: {str(e)}'}), 400
 
-def _create_monthly_chart_data(revenue_data, date_range_start='', date_range_end=''):
+def _create_monthly_chart_data_app(revenue_data, date_range_start='', date_range_end=''):
     # Convert Date to datetime for proper sorting
     revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
     
@@ -235,16 +240,60 @@ def _create_monthly_chart_data(revenue_data, date_range_start='', date_range_end
     pharmacies = revenue_data['Pharmacy'].unique().tolist()
     
     # Create the chart data structure
-    datasets = _create_chart_datasets(revenue_data, dates, pharmacies, '%b-%y')
+    datasets = _create_chart_datasets_app(revenue_data, dates, pharmacies, '%b-%y')
     
     return jsonify({
         'labels': dates,
         'datasets': datasets
     })
 
-def _create_fiscal_year_chart_data(revenue_data):
+def _create_fiscal_year_chart_data_app(revenue_data, fiscal_year_range_start='', fiscal_year_range_end=''):
     print(f"Creating fiscal year chart data with {len(revenue_data)} rows")
     print("Sample data:", revenue_data.head() if not revenue_data.empty else "No data")
+    print("Columns in revenue_data:", revenue_data.columns.tolist())
+    print(f"Fiscal year range: {fiscal_year_range_start} to {fiscal_year_range_end}")
+    
+    # Check if Fiscal_Year column exists and has data
+    if 'Fiscal_Year' not in revenue_data.columns:
+        print("ERROR: Fiscal_Year column not found in data")
+        return {'labels': [], 'datasets': []}
+    
+    # Remove any rows where Fiscal_Year is null or empty
+    revenue_data = revenue_data.dropna(subset=['Fiscal_Year'])
+    revenue_data = revenue_data[revenue_data['Fiscal_Year'] != '']
+    
+    print(f"Data after removing null Fiscal_Year: {len(revenue_data)} rows")
+    print("Unique Fiscal_Year values:", revenue_data['Fiscal_Year'].unique())
+    
+    if revenue_data.empty:
+        print("ERROR: No data after filtering Fiscal_Year")
+        return {'labels': [], 'datasets': []}
+    
+    # Apply fiscal year range filter if provided
+    if fiscal_year_range_start and fiscal_year_range_end:
+        try:
+            # Parse start and end fiscal years (e.g., "FY2025", "FY2026")
+            start_fy = int(fiscal_year_range_start.replace('FY', ''))
+            end_fy = int(fiscal_year_range_end.replace('FY', ''))
+            
+            print(f"Filtering fiscal years from {start_fy} to {end_fy}")
+            
+            # Filter revenue data based on fiscal year range
+            revenue_data = revenue_data[
+                (revenue_data['Fiscal_Year'] >= start_fy) & 
+                (revenue_data['Fiscal_Year'] <= end_fy)
+            ]
+            
+            print(f"Data after fiscal year range filtering: {len(revenue_data)} rows")
+            print("Fiscal years after filtering:", revenue_data['Fiscal_Year'].unique())
+            
+            if revenue_data.empty:
+                print("ERROR: No data after fiscal year range filtering")
+                return {'labels': [], 'datasets': []}
+                
+        except Exception as e:
+            print(f"Error parsing fiscal year range: {e}")
+            # Continue with unfiltered data if parsing fails
     
     # Group by fiscal year and pharmacy
     fy_data = revenue_data.groupby(['Fiscal_Year', 'Pharmacy'])['Value'].sum().reset_index()
@@ -296,7 +345,28 @@ def _create_fiscal_year_chart_data(revenue_data):
         'datasets': datasets
     })
 
-def _create_quarter_chart_data(revenue_data, quarter_range_start='', quarter_range_end=''):
+def _create_quarter_chart_data_app(revenue_data, quarter_range_start='', quarter_range_end=''):
+    print(f"Creating quarter chart data with {len(revenue_data)} rows")
+    print("Sample data:", revenue_data.head() if not revenue_data.empty else "No data")
+    print("Columns in revenue_data:", revenue_data.columns.tolist())
+    
+    # Check if required columns exist
+    if 'Fiscal_Year' not in revenue_data.columns or 'Quarter' not in revenue_data.columns:
+        print("ERROR: Fiscal_Year or Quarter column not found in data")
+        return {'labels': [], 'datasets': []}
+    
+    # Remove any rows where Fiscal_Year or Quarter is null or empty
+    revenue_data = revenue_data.dropna(subset=['Fiscal_Year', 'Quarter'])
+    revenue_data = revenue_data[(revenue_data['Fiscal_Year'] != '') & (revenue_data['Quarter'] != '')]
+    
+    print(f"Data after removing null Fiscal_Year/Quarter: {len(revenue_data)} rows")
+    print("Unique Fiscal_Year values:", revenue_data['Fiscal_Year'].unique())
+    print("Unique Quarter values:", revenue_data['Quarter'].unique())
+    
+    if revenue_data.empty:
+        print("ERROR: No data after filtering Fiscal_Year/Quarter")
+        return {'labels': [], 'datasets': []}
+    
     # Group by fiscal year, quarter, and pharmacy
     quarter_data = revenue_data.groupby(['Fiscal_Year', 'Quarter', 'Pharmacy'])['Value'].sum().reset_index()
     quarter_data = quarter_data.sort_values(['Fiscal_Year', 'Quarter'])
@@ -381,7 +451,7 @@ def _create_quarter_chart_data(revenue_data, quarter_range_start='', quarter_ran
         'datasets': datasets
     })
 
-def _create_chart_datasets(revenue_data, labels, pharmacies, format_str):
+def _create_chart_datasets_app(revenue_data, labels, pharmacies, format_str):
     datasets = []
     colors = [
         '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
@@ -394,12 +464,14 @@ def _create_chart_datasets(revenue_data, labels, pharmacies, format_str):
         data_points = []
         for label in labels:
             if format_str == '%b-%y':
-                label_data = pharmacy_data[pharmacy_data['Date'].dt.strftime(format_str) == label]
+                # For monthly data, match by formatted date
+                matching_data = pharmacy_data[pharmacy_data['Date'].dt.strftime('%b-%y') == label]
             else:
-                label_data = pharmacy_data  # For non-date based grouping
+                # For other formats, you might need different matching logic
+                matching_data = pharmacy_data[pharmacy_data['Date'].dt.strftime(format_str) == label]
             
-            if not label_data.empty:
-                data_points.append(label_data['Value'].iloc[0])
+            if not matching_data.empty:
+                data_points.append(matching_data['Value'].sum())
             else:
                 data_points.append(0)
         
@@ -414,38 +486,40 @@ def _create_chart_datasets(revenue_data, labels, pharmacies, format_str):
     
     return datasets
 
-def _apply_acquisition_filter(revenue_data, acquisition_dates):
-    """Filter revenue data to only include data from acquisition date onwards for each pharmacy"""
-    filtered_rows = []
+def _apply_acquisition_filter_app(revenue_data, acquisition_dates):
+    # Convert Date column to datetime if it's not already
+    if not pd.api.types.is_datetime64_any_dtype(revenue_data['Date']):
+        revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
     
-    # Convert Date column to datetime for comparison
-    revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
+    filtered_data = []
     
-    for _, row in revenue_data.iterrows():
-        pharmacy = row['Pharmacy']
-        row_date = row['Date']
+    for pharmacy, acquisition_date_str in acquisition_dates.items():
+        pharmacy_data = revenue_data[revenue_data['Pharmacy'] == pharmacy].copy()
         
-        if pharmacy in acquisition_dates:
-            acquisition_date_str = acquisition_dates[pharmacy]
-            if acquisition_date_str:
-                try:
-                    # Parse acquisition date
+        if not pharmacy_data.empty and acquisition_date_str:
+            try:
+                # Parse acquisition date
+                if len(acquisition_date_str) <= 7:  # Format like "Jan-24"
                     acquisition_date = pd.to_datetime(acquisition_date_str, format='%b-%y')
-                    
-                    # Only include data from acquisition date onwards
-                    if row_date >= acquisition_date:
-                        filtered_rows.append(row)
-                except:
-                    # If date parsing fails, include the row
-                    filtered_rows.append(row)
-            else:
-                # No acquisition date, include the row
-                filtered_rows.append(row)
+                else:
+                    acquisition_date = pd.to_datetime(acquisition_date_str)
+                
+                # Filter data from acquisition date onwards
+                pharmacy_data = pharmacy_data[pharmacy_data['Date'] >= acquisition_date]
+                
+                filtered_data.append(pharmacy_data)
+            except Exception as e:
+                print(f"Error parsing acquisition date for {pharmacy}: {e}")
+                # If date parsing fails, include all data for this pharmacy
+                filtered_data.append(pharmacy_data)
         else:
-            # Pharmacy not in acquisition dates, include the row
-            filtered_rows.append(row)
+            # If no acquisition date, include all data for this pharmacy
+            filtered_data.append(pharmacy_data)
     
-    return pd.DataFrame(filtered_rows) if filtered_rows else pd.DataFrame(columns=revenue_data.columns)
+    if filtered_data:
+        return pd.concat(filtered_data, ignore_index=True)
+    else:
+        return revenue_data
 
 @app.route('/api/revenue-by-period')
 def get_revenue_by_period():
@@ -454,17 +528,14 @@ def get_revenue_by_period():
     if current_data is None:
         return jsonify({'error': 'No data uploaded'}), 400
     
-    view_type = request.args.get('view_type', 'month')
-    
     try:
+        view_type = request.args.get('view_type', 'month')
+        
         # Filter for Total Revenue metric only
         revenue_data = current_data[current_data['Metric'] == 'Total Revenue'].copy()
         
         if revenue_data.empty:
             return jsonify({'error': 'No Total Revenue data found'}), 400
-        
-        # Convert Date to datetime for proper processing
-        revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
         
         if view_type == 'month':
             return _process_monthly_data(revenue_data)
@@ -476,32 +547,27 @@ def get_revenue_by_period():
             return jsonify({'error': 'Invalid view type'}), 400
             
     except Exception as e:
-        return jsonify({'error': f'Error getting revenue data: {str(e)}'}), 400
+        return jsonify({'error': f'Error getting revenue by period: {str(e)}'}), 400
 
 def _process_monthly_data(revenue_data):
     # Group by month and sum the revenue across all pharmacies
-    monthly_revenue = revenue_data.groupby(revenue_data['Date'].dt.to_period('M'))['Value'].sum().reset_index()
-    monthly_revenue['Date'] = monthly_revenue['Date'].astype(str)
+    revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
     
-    # Sort by date (earliest to latest)
+    # Default behavior: filter data up to current month
+    current_date = datetime.now()
+    current_month_start = current_date.replace(day=1)
+    revenue_data = revenue_data[revenue_data['Date'] <= current_month_start]
+    
+    monthly_revenue = revenue_data.groupby('Date')['Value'].sum().reset_index()
     monthly_revenue = monthly_revenue.sort_values('Date')
     
+    # Get current period (most recent month with data)
+    current_period = monthly_revenue.iloc[-1]['Date']
+    current_period_display = current_period.strftime('%b-%y')
+    current_revenue = float(monthly_revenue.iloc[-1]['Value'])
+    
     # Get current live month
-    current_live_month = pd.Timestamp.now().to_period('M')
-    current_live_month_str = str(current_live_month)
-    
-    # Find current revenue
-    current_revenue = 0
-    current_period_display = ""
-    
-    live_month_data = monthly_revenue[monthly_revenue['Date'] == current_live_month_str]
-    if not live_month_data.empty:
-        current_revenue = float(live_month_data.iloc[0]['Value'])
-        current_period_display = current_live_month.strftime('%b-%y')
-    else:
-        most_recent = monthly_revenue.iloc[-1]
-        current_revenue = float(most_recent['Value'])
-        current_period_display = pd.Period(most_recent['Date']).strftime('%b-%y')
+    current_live_month = datetime.now().replace(day=1)
     
     # Format data with percentage changes
     periods_data = []
@@ -536,36 +602,28 @@ def _process_monthly_data(revenue_data):
 
 def _process_fiscal_year_data(revenue_data):
     # Group by fiscal year
-    fiscal_year_revenue = revenue_data.groupby('Fiscal_Year')['Value'].sum().reset_index()
-    fiscal_year_revenue = fiscal_year_revenue.sort_values('Fiscal_Year')
+    fy_revenue = revenue_data.groupby('Fiscal_Year')['Value'].sum().reset_index()
+    fy_revenue = fy_revenue.sort_values('Fiscal_Year')
     
-    # Get current UK fiscal year (April 6 - April 5)
-    # FY is named after the year it ends in
-    current_date = pd.Timestamp.now()
+    # Get current period (most recent fiscal year with data)
+    current_period = fy_revenue.iloc[-1]['Fiscal_Year']
+    current_period_display = f"FY{current_period}"
+    current_revenue = float(fy_revenue.iloc[-1]['Value'])
+    
+    # Calculate current fiscal year
+    current_date = datetime.now()
     if current_date.month < 4 or (current_date.month == 4 and current_date.day < 6):
-        # Before April 6, so we're in the fiscal year that ends this year
         current_fy = current_date.year
     else:
-        # After April 6, so we're in the fiscal year that ends next year
         current_fy = current_date.year + 1
-    
-    # Find revenue for current fiscal year or use most recent available
-    current_fy_data = fiscal_year_revenue[fiscal_year_revenue['Fiscal_Year'] == current_fy]
-    if not current_fy_data.empty:
-        current_revenue = float(current_fy_data.iloc[0]['Value'])
-        current_fy_display = current_fy
-    else:
-        # Use most recent fiscal year in data
-        most_recent = fiscal_year_revenue.iloc[-1]
-        current_revenue = float(most_recent['Value'])
-        current_fy_display = most_recent['Fiscal_Year']
+    current_live_fy = f"FY{current_fy}"
     
     # Format data with percentage changes
     periods_data = []
     previous_revenue = None
     
-    for _, row in fiscal_year_revenue.iterrows():
-        fy = row['Fiscal_Year']
+    for _, row in fy_revenue.iterrows():
+        period_formatted = f"FY{row['Fiscal_Year']}"
         revenue = float(row['Value'])
         
         percentage_change = None
@@ -574,11 +632,8 @@ def _process_fiscal_year_data(revenue_data):
             percentage_change = ((revenue - previous_revenue) / previous_revenue) * 100
             change_direction = 'increase' if percentage_change > 0 else 'decrease'
         
-        # Clean up the fiscal year display - remove any existing FY prefix
-        fy_clean = str(fy).replace('FY', '').replace('fy', '').strip()
-        
         periods_data.append({
-            'period': f'FY{fy_clean}',
+            'period': period_formatted,
             'revenue': revenue,
             'percentage_change': round(percentage_change, 1) if percentage_change is not None else None,
             'change_direction': change_direction
@@ -586,71 +641,62 @@ def _process_fiscal_year_data(revenue_data):
         
         previous_revenue = revenue
     
-    current_fy_clean = str(current_fy_display).replace('FY', '').replace('fy', '').strip()
-    
     return jsonify({
         'periods': periods_data,
-        'current_period': f'FY{current_fy_clean}',
+        'current_period': current_period_display,
         'current_revenue': current_revenue,
-        'live_period': f'FY{current_fy_clean}',
+        'live_period': current_live_fy,
         'view_type': 'fiscal_year'
     })
 
 def _process_quarter_data(revenue_data):
     # Create a fiscal quarter column combining FY and Quarter
-    revenue_data['FY_Quarter'] = revenue_data['Fiscal_Year'].astype(str) + '-' + revenue_data['Quarter']
+    revenue_data['Fiscal_Quarter'] = revenue_data['Quarter'] + ' FY' + revenue_data['Fiscal_Year'].astype(str)
     
-    # Group by fiscal year and quarter
-    quarter_revenue = revenue_data.groupby(['Fiscal_Year', 'Quarter'])['Value'].sum().reset_index()
-    quarter_revenue = quarter_revenue.sort_values(['Fiscal_Year', 'Quarter'])
+    # Group by fiscal quarter
+    quarter_revenue = revenue_data.groupby('Fiscal_Quarter')['Value'].sum().reset_index()
     
-    # Get current UK fiscal year and quarter
-    # FY is named after the year it ends in
-    current_date = pd.Timestamp.now()
+    # Sort quarters properly (Q1 FY2025, Q2 FY2025, Q3 FY2025, Q4 FY2025, Q1 FY2026, etc.)
+    def sort_quarter_key(row):
+        quarter = row['Fiscal_Quarter']
+        q_part, fy_part = quarter.split(' FY')
+        q_num = int(q_part.replace('Q', ''))
+        fy_num = int(fy_part)
+        return (fy_num, q_num)
+    
+    quarter_revenue['sort_key'] = quarter_revenue.apply(sort_quarter_key, axis=1)
+    quarter_revenue = quarter_revenue.sort_values('sort_key').drop('sort_key', axis=1)
+    
+    # Get current period (most recent quarter with data)
+    current_period = quarter_revenue.iloc[-1]['Fiscal_Quarter']
+    current_revenue = float(quarter_revenue.iloc[-1]['Value'])
+    
+    # Calculate current quarter
+    current_date = datetime.now()
     if current_date.month < 4 or (current_date.month == 4 and current_date.day < 6):
-        # Before April 6, so we're in the fiscal year that ends this year
         current_fy = current_date.year
     else:
-        # After April 6, so we're in the fiscal year that ends next year
         current_fy = current_date.year + 1
     
-    # Determine current quarter within fiscal year (April-March)
-    if current_date.month >= 4:
-        # April to December (Q1-Q3)
-        if current_date.month <= 6:
-            current_q = 'Q1'
-        elif current_date.month <= 9:
-            current_q = 'Q2'
-        elif current_date.month <= 12:
-            current_q = 'Q3'
-    else:
-        # January to March (Q4)
+    # Determine current quarter (Apr-Jun=Q1, Jul-Sep=Q2, Oct-Dec=Q3, Jan-Mar=Q4)
+    month = current_date.month
+    if month >= 4 and month <= 6:
+        current_q = 'Q1'
+    elif month >= 7 and month <= 9:
+        current_q = 'Q2'
+    elif month >= 10 and month <= 12:
+        current_q = 'Q3'
+    else:  # Jan-Mar
         current_q = 'Q4'
     
-    # Find revenue for current quarter or use most recent available
-    current_quarter_data = quarter_revenue[
-        (quarter_revenue['Fiscal_Year'] == current_fy) & 
-        (quarter_revenue['Quarter'] == current_q)
-    ]
-    
-    if not current_quarter_data.empty:
-        current_revenue = float(current_quarter_data.iloc[0]['Value'])
-        current_fy_display = current_fy
-        current_q_display = current_q
-    else:
-        # Use most recent quarter in data
-        most_recent = quarter_revenue.iloc[-1]
-        current_revenue = float(most_recent['Value'])
-        current_fy_display = most_recent['Fiscal_Year']
-        current_q_display = most_recent['Quarter']
+    current_live_quarter = f"{current_q} FY{current_fy}"
     
     # Format data with percentage changes
     periods_data = []
     previous_revenue = None
     
     for _, row in quarter_revenue.iterrows():
-        fy = row['Fiscal_Year']
-        quarter = row['Quarter']
+        period_formatted = row['Fiscal_Quarter']
         revenue = float(row['Value'])
         
         percentage_change = None
@@ -659,11 +705,8 @@ def _process_quarter_data(revenue_data):
             percentage_change = ((revenue - previous_revenue) / previous_revenue) * 100
             change_direction = 'increase' if percentage_change > 0 else 'decrease'
         
-        # Clean up the fiscal year display
-        fy_clean = str(fy).replace('FY', '').replace('fy', '').strip()
-        
         periods_data.append({
-            'period': f'{quarter} FY{fy_clean}',
+            'period': period_formatted,
             'revenue': revenue,
             'percentage_change': round(percentage_change, 1) if percentage_change is not None else None,
             'change_direction': change_direction
@@ -671,20 +714,80 @@ def _process_quarter_data(revenue_data):
         
         previous_revenue = revenue
     
-    current_fy_clean = str(current_fy_display).replace('FY', '').replace('fy', '').strip()
-    
     return jsonify({
         'periods': periods_data,
-        'current_period': f'{current_q_display} FY{current_fy_clean}',
+        'current_period': current_period,
         'current_revenue': current_revenue,
-        'live_period': f'{current_q_display} FY{current_fy_clean}',
+        'live_period': current_live_quarter,
         'view_type': 'quarter'
     })
 
-# Keep the old endpoint for backward compatibility
 @app.route('/api/monthly-revenue')
 def get_monthly_revenue():
-    return get_revenue_by_period()
+    global current_data
+    
+    if current_data is None:
+        return jsonify({'error': 'No data uploaded'}), 400
+    
+    try:
+        # Filter for Total Revenue metric only
+        revenue_data = current_data[current_data['Metric'] == 'Total Revenue'].copy()
+        
+        if revenue_data.empty:
+            return jsonify({'error': 'No Total Revenue data found'}), 400
+        
+        # Group by month and sum the revenue across all pharmacies
+        revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
+        
+        # Default behavior: filter data up to current month
+        current_date = datetime.now()
+        current_month_start = current_date.replace(day=1)
+        revenue_data = revenue_data[revenue_data['Date'] <= current_month_start]
+        
+        monthly_revenue = revenue_data.groupby('Date')['Value'].sum().reset_index()
+        monthly_revenue = monthly_revenue.sort_values('Date')
+        
+        # Get current period (most recent month with data)
+        current_period = monthly_revenue.iloc[-1]['Date']
+        current_period_display = current_period.strftime('%b-%y')
+        current_revenue = float(monthly_revenue.iloc[-1]['Value'])
+        
+        # Get current live month
+        current_live_month = datetime.now().replace(day=1)
+        
+        # Format data with percentage changes
+        periods_data = []
+        previous_revenue = None
+        
+        for _, row in monthly_revenue.iterrows():
+            period_formatted = pd.Period(row['Date']).strftime('%b-%y')
+            revenue = float(row['Value'])
+            
+            percentage_change = None
+            change_direction = None
+            if previous_revenue is not None and previous_revenue > 0:
+                percentage_change = ((revenue - previous_revenue) / previous_revenue) * 100
+                change_direction = 'increase' if percentage_change > 0 else 'decrease'
+            
+            periods_data.append({
+                'period': period_formatted,
+                'revenue': revenue,
+                'percentage_change': round(percentage_change, 1) if percentage_change is not None else None,
+                'change_direction': change_direction
+            })
+            
+            previous_revenue = revenue
+        
+        return jsonify({
+            'periods': periods_data,
+            'current_period': current_period_display,
+            'current_revenue': current_revenue,
+            'live_period': current_live_month.strftime('%b-%y'),
+            'view_type': 'month'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error getting monthly revenue: {str(e)}'}), 400
 
-# Export the Flask app for Vercel
-# The variable must be named 'app' for Vercel to recognize it 
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000) 

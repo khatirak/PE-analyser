@@ -4,21 +4,19 @@ import pandas as pd
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
-
-app = Flask(__name__)
+import tempfile
+app = Flask(__name__, 
+           template_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates'),
+           static_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static'))
 CORS(app)
 
-# Configuration
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'csv'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# Configuration for serverless environment
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
-# Create uploads directory if it doesn't exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Global variable to store the current dataset
 current_data = None
+
+ALLOWED_EXTENSIONS = {'csv'}
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -40,13 +38,9 @@ def upload_file():
         return jsonify({'error': 'No selected file'}), 400
     
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        
         try:
-            # Read the CSV file (first row is treated as column names)
-            current_data = pd.read_csv(filepath, header=0)
+            # Read the CSV file directly from memory (first row is treated as column names)
+            current_data = pd.read_csv(file, header=0)
             
             # Basic validation
             expected_columns = ['Pharmacy', 'Cluster', 'Acquisition_Date', 'Metric', 'Fiscal_Year', 'Quarter', 'Date', 'Value']
@@ -165,6 +159,8 @@ def get_revenue_data():
         date_range_end = request.args.get('date_range_end', '')
         quarter_range_start = request.args.get('quarter_range_start', '')
         quarter_range_end = request.args.get('quarter_range_end', '')
+        fiscal_year_range_start = request.args.get('fiscal_year_range_start', '')
+        fiscal_year_range_end = request.args.get('fiscal_year_range_end', '')
         
         selected_pharmacies = []
         if selected_pharmacies_param:
@@ -178,8 +174,16 @@ def get_revenue_data():
         except:
             acquisition_dates = {}
         
+        print(f"=== REVENUE DATA DEBUG ===")
+        print(f"View type requested: {view_type}")
+        print(f"Total data rows: {len(current_data)}")
+        print(f"Available metrics: {current_data['Metric'].unique()}")
+        print(f"Available columns: {current_data.columns.tolist()}")
+        
         # Filter for Total Revenue metric only
         revenue_data = current_data[current_data['Metric'] == 'Total Revenue'].copy()
+        
+        print(f"Total Revenue data rows: {len(revenue_data)}")
         
         if revenue_data.empty:
             return jsonify({'error': 'No Total Revenue data found'}), 400
@@ -192,21 +196,25 @@ def get_revenue_data():
         
         # Apply acquisition date filter if enabled
         if acquisition_filter and acquisition_dates:
-            revenue_data = _apply_acquisition_filter_app(revenue_data, acquisition_dates)
+            revenue_data = _apply_acquisition_filter(revenue_data, acquisition_dates)
+        
+        print(f"Final revenue data rows before chart creation: {len(revenue_data)}")
+        print(f"Selected pharmacies: {selected_pharmacies}")
+        print(f"Acquisition filter enabled: {acquisition_filter}")
         
         if view_type == 'month':
-            return _create_monthly_chart_data_app(revenue_data, date_range_start, date_range_end)
+            return _create_monthly_chart_data(revenue_data, date_range_start, date_range_end)
         elif view_type == 'fiscal_year':
-            return _create_fiscal_year_chart_data_app(revenue_data)
+            return _create_fiscal_year_chart_data(revenue_data, fiscal_year_range_start, fiscal_year_range_end)
         elif view_type == 'quarter':
-            return _create_quarter_chart_data_app(revenue_data, quarter_range_start, quarter_range_end)
+            return _create_quarter_chart_data(revenue_data, quarter_range_start, quarter_range_end)
         else:
             return jsonify({'error': 'Invalid view type'}), 400
         
     except Exception as e:
         return jsonify({'error': f'Error getting revenue data: {str(e)}'}), 400
 
-def _create_monthly_chart_data_app(revenue_data, date_range_start='', date_range_end=''):
+def _create_monthly_chart_data(revenue_data, date_range_start='', date_range_end=''):
     # Convert Date to datetime for proper sorting
     revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
     
@@ -241,16 +249,60 @@ def _create_monthly_chart_data_app(revenue_data, date_range_start='', date_range
     pharmacies = revenue_data['Pharmacy'].unique().tolist()
     
     # Create the chart data structure
-    datasets = _create_chart_datasets_app(revenue_data, dates, pharmacies, '%b-%y')
+    datasets = _create_chart_datasets(revenue_data, dates, pharmacies, '%b-%y')
     
     return jsonify({
         'labels': dates,
         'datasets': datasets
     })
 
-def _create_fiscal_year_chart_data_app(revenue_data):
+def _create_fiscal_year_chart_data(revenue_data, fiscal_year_range_start='', fiscal_year_range_end=''):
     print(f"Creating fiscal year chart data with {len(revenue_data)} rows")
     print("Sample data:", revenue_data.head() if not revenue_data.empty else "No data")
+    print("Columns in revenue_data:", revenue_data.columns.tolist())
+    print(f"Fiscal year range: {fiscal_year_range_start} to {fiscal_year_range_end}")
+    
+    # Check if Fiscal_Year column exists and has data
+    if 'Fiscal_Year' not in revenue_data.columns:
+        print("ERROR: Fiscal_Year column not found in data")
+        return {'labels': [], 'datasets': []}
+    
+    # Remove any rows where Fiscal_Year is null or empty
+    revenue_data = revenue_data.dropna(subset=['Fiscal_Year'])
+    revenue_data = revenue_data[revenue_data['Fiscal_Year'] != '']
+    
+    print(f"Data after removing null Fiscal_Year: {len(revenue_data)} rows")
+    print("Unique Fiscal_Year values:", revenue_data['Fiscal_Year'].unique())
+    
+    if revenue_data.empty:
+        print("ERROR: No data after filtering Fiscal_Year")
+        return {'labels': [], 'datasets': []}
+    
+    # Apply fiscal year range filter if provided
+    if fiscal_year_range_start and fiscal_year_range_end:
+        try:
+            # Parse start and end fiscal years (e.g., "FY2025", "FY2026")
+            start_fy = int(fiscal_year_range_start.replace('FY', ''))
+            end_fy = int(fiscal_year_range_end.replace('FY', ''))
+            
+            print(f"Filtering fiscal years from {start_fy} to {end_fy}")
+            
+            # Filter revenue data based on fiscal year range
+            revenue_data = revenue_data[
+                (revenue_data['Fiscal_Year'] >= start_fy) & 
+                (revenue_data['Fiscal_Year'] <= end_fy)
+            ]
+            
+            print(f"Data after fiscal year range filtering: {len(revenue_data)} rows")
+            print("Fiscal years after filtering:", revenue_data['Fiscal_Year'].unique())
+            
+            if revenue_data.empty:
+                print("ERROR: No data after fiscal year range filtering")
+                return {'labels': [], 'datasets': []}
+                
+        except Exception as e:
+            print(f"Error parsing fiscal year range: {e}")
+            # Continue with unfiltered data if parsing fails
     
     # Group by fiscal year and pharmacy
     fy_data = revenue_data.groupby(['Fiscal_Year', 'Pharmacy'])['Value'].sum().reset_index()
@@ -302,7 +354,28 @@ def _create_fiscal_year_chart_data_app(revenue_data):
         'datasets': datasets
     })
 
-def _create_quarter_chart_data_app(revenue_data, quarter_range_start='', quarter_range_end=''):
+def _create_quarter_chart_data(revenue_data, quarter_range_start='', quarter_range_end=''):
+    print(f"Creating quarter chart data with {len(revenue_data)} rows")
+    print("Sample data:", revenue_data.head() if not revenue_data.empty else "No data")
+    print("Columns in revenue_data:", revenue_data.columns.tolist())
+    
+    # Check if required columns exist
+    if 'Fiscal_Year' not in revenue_data.columns or 'Quarter' not in revenue_data.columns:
+        print("ERROR: Fiscal_Year or Quarter column not found in data")
+        return {'labels': [], 'datasets': []}
+    
+    # Remove any rows where Fiscal_Year or Quarter is null or empty
+    revenue_data = revenue_data.dropna(subset=['Fiscal_Year', 'Quarter'])
+    revenue_data = revenue_data[(revenue_data['Fiscal_Year'] != '') & (revenue_data['Quarter'] != '')]
+    
+    print(f"Data after removing null Fiscal_Year/Quarter: {len(revenue_data)} rows")
+    print("Unique Fiscal_Year values:", revenue_data['Fiscal_Year'].unique())
+    print("Unique Quarter values:", revenue_data['Quarter'].unique())
+    
+    if revenue_data.empty:
+        print("ERROR: No data after filtering Fiscal_Year/Quarter")
+        return {'labels': [], 'datasets': []}
+    
     # Group by fiscal year, quarter, and pharmacy
     quarter_data = revenue_data.groupby(['Fiscal_Year', 'Quarter', 'Pharmacy'])['Value'].sum().reset_index()
     quarter_data = quarter_data.sort_values(['Fiscal_Year', 'Quarter'])
@@ -387,7 +460,7 @@ def _create_quarter_chart_data_app(revenue_data, quarter_range_start='', quarter
         'datasets': datasets
     })
 
-def _create_chart_datasets_app(revenue_data, labels, pharmacies, format_str):
+def _create_chart_datasets(revenue_data, labels, pharmacies, format_str):
     datasets = []
     colors = [
         '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
@@ -420,7 +493,7 @@ def _create_chart_datasets_app(revenue_data, labels, pharmacies, format_str):
     
     return datasets
 
-def _apply_acquisition_filter_app(revenue_data, acquisition_dates):
+def _apply_acquisition_filter(revenue_data, acquisition_dates):
     """Filter revenue data to only include data from acquisition date onwards for each pharmacy"""
     filtered_rows = []
     
@@ -692,5 +765,5 @@ def _process_quarter_data(revenue_data):
 def get_monthly_revenue():
     return get_revenue_by_period()
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5001) 
+# Export the Flask app for Vercel
+# The variable must be named 'app' for Vercel to recognize it 
