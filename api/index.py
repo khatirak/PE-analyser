@@ -94,8 +94,51 @@ def get_pharmacies():
         return jsonify({'error': 'No data uploaded'}), 400
     
     try:
-        pharmacies = current_data['Pharmacy'].unique().tolist()
-        return jsonify(pharmacies)
+        # Get detailed pharmacy information with acquisition status
+        pharmacy_details = []
+        current_date = pd.Timestamp.now()
+        
+        # Group by pharmacy to get unique entries with acquisition date
+        pharmacy_info = current_data.groupby('Pharmacy').agg({
+            'Acquisition_Date': 'first',  # Get the acquisition date for each pharmacy
+            'Cluster': 'first'
+        }).reset_index()
+        
+        for _, row in pharmacy_info.iterrows():
+            pharmacy_name = row['Pharmacy']
+            acquisition_date_str = row['Acquisition_Date']
+            cluster = row['Cluster']
+            
+            # Determine if pharmacy is acquired or pipeline
+            is_acquired = False
+            acquisition_date = None
+            
+            if pd.notna(acquisition_date_str) and acquisition_date_str:
+                try:
+                    # Try different date formats
+                    if isinstance(acquisition_date_str, str):
+                        if len(acquisition_date_str) <= 7:  # Format like "Jan-24" or "01-24"
+                            acquisition_date = pd.to_datetime(acquisition_date_str, format='%b-%y')
+                        else:
+                            # Try standard date parsing
+                            acquisition_date = pd.to_datetime(acquisition_date_str)
+                    else:
+                        acquisition_date = pd.to_datetime(acquisition_date_str)
+                    
+                    # Consider acquired if acquisition date is in the past or current month
+                    is_acquired = acquisition_date <= current_date
+                except:
+                    # If date parsing fails, consider it pipeline
+                    is_acquired = False
+            
+            pharmacy_details.append({
+                'name': pharmacy_name,
+                'status': 'acquired' if is_acquired else 'pipeline',
+                'acquisition_date': acquisition_date.strftime('%b-%y') if acquisition_date else None,
+                'cluster': cluster
+            })
+        
+        return jsonify(pharmacy_details)
     except Exception as e:
         return jsonify({'error': f'Error getting pharmacies: {str(e)}'}), 400
 
@@ -110,10 +153,24 @@ def get_revenue_data():
         # Get parameters
         selected_pharmacies_param = request.args.get('pharmacies', '')
         view_type = request.args.get('view_type', 'month')
+        acquisition_filter = request.args.get('acquisition_filter', 'false').lower() == 'true'
+        acquisition_dates_param = request.args.get('acquisition_dates', '{}')
+        date_range_start = request.args.get('date_range_start', '')
+        date_range_end = request.args.get('date_range_end', '')
+        quarter_range_start = request.args.get('quarter_range_start', '')
+        quarter_range_end = request.args.get('quarter_range_end', '')
         
         selected_pharmacies = []
         if selected_pharmacies_param:
             selected_pharmacies = [p.strip() for p in selected_pharmacies_param.split(',') if p.strip()]
+        
+        # Parse acquisition dates if provided
+        acquisition_dates = {}
+        try:
+            import json
+            acquisition_dates = json.loads(acquisition_dates_param)
+        except:
+            acquisition_dates = {}
         
         # Filter for Total Revenue metric only
         revenue_data = current_data[current_data['Metric'] == 'Total Revenue'].copy()
@@ -127,28 +184,48 @@ def get_revenue_data():
             if revenue_data.empty:
                 return jsonify({'error': 'No data found for selected pharmacies'}), 400
         
+        # Apply acquisition date filter if enabled
+        if acquisition_filter and acquisition_dates:
+            revenue_data = _apply_acquisition_filter(revenue_data, acquisition_dates)
+        
         if view_type == 'month':
-            return _create_monthly_chart_data(revenue_data)
+            return _create_monthly_chart_data(revenue_data, date_range_start, date_range_end)
         elif view_type == 'fiscal_year':
             return _create_fiscal_year_chart_data(revenue_data)
         elif view_type == 'quarter':
-            return _create_quarter_chart_data(revenue_data)
+            return _create_quarter_chart_data(revenue_data, quarter_range_start, quarter_range_end)
         else:
             return jsonify({'error': 'Invalid view type'}), 400
         
     except Exception as e:
         return jsonify({'error': f'Error getting revenue data: {str(e)}'}), 400
 
-def _create_monthly_chart_data(revenue_data):
+def _create_monthly_chart_data(revenue_data, date_range_start='', date_range_end=''):
     # Convert Date to datetime for proper sorting
     revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
     
-    # Get current date and filter data up to current month
-    current_date = datetime.now()
-    current_month_start = current_date.replace(day=1)
-    
-    # Filter data to only include dates up to current month
-    revenue_data = revenue_data[revenue_data['Date'] <= current_month_start]
+    # Apply date range filter if provided
+    if date_range_start and date_range_end:
+        try:
+            start_date = pd.to_datetime(date_range_start + '-01')
+            end_date = pd.to_datetime(date_range_end + '-01')
+            # Add one month to end_date to include the entire end month
+            end_date = end_date + pd.DateOffset(months=1) - pd.DateOffset(days=1)
+            
+            revenue_data = revenue_data[
+                (revenue_data['Date'] >= start_date) & 
+                (revenue_data['Date'] <= end_date)
+            ]
+        except:
+            # If date parsing fails, fall back to default behavior
+            current_date = datetime.now()
+            current_month_start = current_date.replace(day=1)
+            revenue_data = revenue_data[revenue_data['Date'] <= current_month_start]
+    else:
+        # Default behavior: filter data up to current month
+        current_date = datetime.now()
+        current_month_start = current_date.replace(day=1)
+        revenue_data = revenue_data[revenue_data['Date'] <= current_month_start]
     
     # Sort by date
     revenue_data = revenue_data.sort_values('Date')
@@ -166,9 +243,15 @@ def _create_monthly_chart_data(revenue_data):
     })
 
 def _create_fiscal_year_chart_data(revenue_data):
+    print(f"Creating fiscal year chart data with {len(revenue_data)} rows")
+    print("Sample data:", revenue_data.head() if not revenue_data.empty else "No data")
+    
     # Group by fiscal year and pharmacy
     fy_data = revenue_data.groupby(['Fiscal_Year', 'Pharmacy'])['Value'].sum().reset_index()
     fy_data = fy_data.sort_values('Fiscal_Year')
+    
+    print(f"Grouped fiscal year data: {len(fy_data)} rows")
+    print("Fiscal years found:", fy_data['Fiscal_Year'].unique() if not fy_data.empty else "None")
     
     # Get unique fiscal years and pharmacies
     unique_fys = sorted(fy_data['Fiscal_Year'].unique())
@@ -213,10 +296,43 @@ def _create_fiscal_year_chart_data(revenue_data):
         'datasets': datasets
     })
 
-def _create_quarter_chart_data(revenue_data):
+def _create_quarter_chart_data(revenue_data, quarter_range_start='', quarter_range_end=''):
     # Group by fiscal year, quarter, and pharmacy
     quarter_data = revenue_data.groupby(['Fiscal_Year', 'Quarter', 'Pharmacy'])['Value'].sum().reset_index()
     quarter_data = quarter_data.sort_values(['Fiscal_Year', 'Quarter'])
+    
+    # Apply quarter range filter if provided
+    if quarter_range_start and quarter_range_end:
+        try:
+            # Parse start quarter (e.g., "Q1-FY2025")
+            start_parts = quarter_range_start.split('-FY')
+            start_q = start_parts[0]
+            start_fy = int(start_parts[1])
+            
+            # Parse end quarter (e.g., "Q2-FY2026")
+            end_parts = quarter_range_end.split('-FY')
+            end_q = end_parts[0]
+            end_fy = int(end_parts[1])
+            
+            # Filter quarter data based on range
+            filtered_quarters = []
+            for _, row in quarter_data.iterrows():
+                row_fy = row['Fiscal_Year']
+                row_q = row['Quarter']
+                
+                # Check if this quarter falls within the selected range
+                if (row_fy > start_fy or (row_fy == start_fy and row_q >= start_q)) and \
+                   (row_fy < end_fy or (row_fy == end_fy and row_q <= end_q)):
+                    filtered_quarters.append(row)
+            
+            if filtered_quarters:
+                quarter_data = pd.DataFrame(filtered_quarters)
+            else:
+                quarter_data = pd.DataFrame(columns=quarter_data.columns)
+                
+        except Exception as e:
+            print(f"Error parsing quarter range: {e}")
+            # Continue with unfiltered data if parsing fails
     
     # Create quarter labels
     quarter_labels = []
@@ -297,6 +413,39 @@ def _create_chart_datasets(revenue_data, labels, pharmacies, format_str):
         })
     
     return datasets
+
+def _apply_acquisition_filter(revenue_data, acquisition_dates):
+    """Filter revenue data to only include data from acquisition date onwards for each pharmacy"""
+    filtered_rows = []
+    
+    # Convert Date column to datetime for comparison
+    revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
+    
+    for _, row in revenue_data.iterrows():
+        pharmacy = row['Pharmacy']
+        row_date = row['Date']
+        
+        if pharmacy in acquisition_dates:
+            acquisition_date_str = acquisition_dates[pharmacy]
+            if acquisition_date_str:
+                try:
+                    # Parse acquisition date
+                    acquisition_date = pd.to_datetime(acquisition_date_str, format='%b-%y')
+                    
+                    # Only include data from acquisition date onwards
+                    if row_date >= acquisition_date:
+                        filtered_rows.append(row)
+                except:
+                    # If date parsing fails, include the row
+                    filtered_rows.append(row)
+            else:
+                # No acquisition date, include the row
+                filtered_rows.append(row)
+        else:
+            # Pharmacy not in acquisition dates, include the row
+            filtered_rows.append(row)
+    
+    return pd.DataFrame(filtered_rows) if filtered_rows else pd.DataFrame(columns=revenue_data.columns)
 
 @app.route('/api/revenue-by-period')
 def get_revenue_by_period():
@@ -395,10 +544,10 @@ def _process_fiscal_year_data(revenue_data):
     current_date = pd.Timestamp.now()
     if current_date.month < 4 or (current_date.month == 4 and current_date.day < 6):
         # Before April 6, so we're in the fiscal year that ends this year
-        current_fy = current_date.year + 1
+        current_fy = current_date.year
     else:
         # After April 6, so we're in the fiscal year that ends next year
-        current_fy = current_date.year + 2
+        current_fy = current_date.year + 1
     
     # Find revenue for current fiscal year or use most recent available
     current_fy_data = fiscal_year_revenue[fiscal_year_revenue['Fiscal_Year'] == current_fy]
@@ -460,10 +609,10 @@ def _process_quarter_data(revenue_data):
     current_date = pd.Timestamp.now()
     if current_date.month < 4 or (current_date.month == 4 and current_date.day < 6):
         # Before April 6, so we're in the fiscal year that ends this year
-        current_fy = current_date.year + 1
+        current_fy = current_date.year
     else:
         # After April 6, so we're in the fiscal year that ends next year
-        current_fy = current_date.year + 2
+        current_fy = current_date.year + 1
     
     # Determine current quarter within fiscal year (April-March)
     if current_date.month >= 4:
