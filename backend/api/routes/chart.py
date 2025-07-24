@@ -11,7 +11,6 @@ def get_chart_data():
     # Get query parameters
     pharmacies = request.args.getlist('pharmacies[]')
     metric = request.args.get('metric', '')
-    acquisition_dates = request.args.get('acquisition_dates')
     acquisition_date = request.args.get('acquisition_date', '')
     view_type = request.args.get('view_type', 'month')
     date_range_start = request.args.get('date_range_start', '')
@@ -21,19 +20,10 @@ def get_chart_data():
     quarter_range_start = request.args.get('quarter_range_start', '')
     quarter_range_end = request.args.get('quarter_range_end', '')
     
-    # Parse acquisition dates if provided
-    acquisition_dates_dict = {}
-    if acquisition_dates:
-        try:
-            acquisition_dates_dict = dict(item.split(":") for item in acquisition_dates.split(","))
-        except:
-            pass
-    
     # Get chart data with metric filter
     chart_data = data_service.get_chart_data(
         pharmacies=pharmacies,
         metric=metric,
-        acquisition_dates=acquisition_dates_dict,
         acquisition_date=acquisition_date
     )
     

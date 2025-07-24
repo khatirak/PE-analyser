@@ -263,5 +263,156 @@ class ChartService:
         
         return datasets
 
+    def create_monthly_period_data(self, revenue_data, date_range_start='', date_range_end=''):
+        """Create monthly period data for total revenue cards"""
+        if revenue_data is None or revenue_data.empty:
+            return {'periods': [], 'current_period': None}
+        
+        # Convert Date to datetime for proper sorting
+        revenue_data['Date'] = pd.to_datetime(revenue_data['Date'], format='%b-%y')
+        
+        # Filter data by date range if provided
+        if date_range_start:
+            start_date = parse_date(date_range_start)
+            if start_date:
+                revenue_data = revenue_data[revenue_data['Date'] >= start_date]
+        
+        if date_range_end:
+            end_date = parse_date(date_range_end)
+            if end_date:
+                revenue_data = revenue_data[revenue_data['Date'] <= end_date]
+        
+        # Group by date and sum all pharmacy values
+        monthly_totals = revenue_data.groupby('Date')['Value'].sum().reset_index()
+        monthly_totals = monthly_totals.sort_values('Date')
+        
+        # Calculate percentage changes
+        periods = []
+        for i, row in monthly_totals.iterrows():
+            period = format_date(row['Date'])
+            revenue = row['Value']
+            
+            # Calculate percentage change from previous period
+            percentage_change = None
+            change_direction = None
+            if i > 0:
+                prev_revenue = monthly_totals.iloc[i-1]['Value']
+                if prev_revenue > 0:
+                    percentage_change = round(((revenue - prev_revenue) / prev_revenue) * 100, 2)
+                    change_direction = 'increase' if percentage_change > 0 else 'decrease'
+            
+            periods.append({
+                'period': period,
+                'revenue': revenue,
+                'percentage_change': percentage_change,
+                'change_direction': change_direction
+            })
+        
+        # Set current period as the most recent
+        current_period = periods[-1]['period'] if periods else None
+        
+        return {
+            'periods': periods,
+            'current_period': current_period
+        }
+    
+    def create_quarter_period_data(self, revenue_data, quarter_range_start='', quarter_range_end=''):
+        """Create quarter period data for total revenue cards"""
+        if revenue_data is None or revenue_data.empty:
+            return {'periods': [], 'current_period': None}
+        
+        # Create combined fiscal quarter column for filtering
+        revenue_data = revenue_data.copy()
+        revenue_data['Fiscal_Quarter_Combined'] = revenue_data['Fiscal_Year'].astype(str) + ' ' + revenue_data['Quarter'].astype(str)
+        
+        # Filter data by quarter range if provided
+        if quarter_range_start:
+            revenue_data = revenue_data[revenue_data['Fiscal_Quarter_Combined'] >= quarter_range_start]
+        
+        if quarter_range_end:
+            revenue_data = revenue_data[revenue_data['Fiscal_Quarter_Combined'] <= quarter_range_end]
+        
+        # Group by fiscal quarter and sum all pharmacy values
+        quarter_totals = revenue_data.groupby('Fiscal_Quarter_Combined')['Value'].sum().reset_index()
+        quarter_totals = quarter_totals.sort_values('Fiscal_Quarter_Combined', key=lambda x: x.map(sort_quarter_key))
+        
+        # Calculate percentage changes
+        periods = []
+        for i, row in quarter_totals.iterrows():
+            period = row['Fiscal_Quarter_Combined']
+            revenue = row['Value']
+            
+            # Calculate percentage change from previous period
+            percentage_change = None
+            change_direction = None
+            if i > 0:
+                prev_revenue = quarter_totals.iloc[i-1]['Value']
+                if prev_revenue > 0:
+                    percentage_change = round(((revenue - prev_revenue) / prev_revenue) * 100, 2)
+                    change_direction = 'increase' if percentage_change > 0 else 'decrease'
+            
+            periods.append({
+                'period': period,
+                'revenue': revenue,
+                'percentage_change': percentage_change,
+                'change_direction': change_direction
+            })
+        
+        # Set current period as the most recent
+        current_period = periods[-1]['period'] if periods else None
+        
+        return {
+            'periods': periods,
+            'current_period': current_period
+        }
+    
+    def create_fiscal_year_period_data(self, revenue_data, fiscal_year_range_start='', fiscal_year_range_end=''):
+        """Create fiscal year period data for total revenue cards"""
+        if revenue_data is None or revenue_data.empty:
+            return {'periods': [], 'current_period': None}
+        
+        # Filter data by fiscal year range if provided
+        if fiscal_year_range_start:
+            start_year = int(fiscal_year_range_start.replace('FY', ''))
+            revenue_data = revenue_data[revenue_data['Fiscal_Year'] >= start_year]
+        
+        if fiscal_year_range_end:
+            end_year = int(fiscal_year_range_end.replace('FY', ''))
+            revenue_data = revenue_data[revenue_data['Fiscal_Year'] <= end_year]
+        
+        # Group by fiscal year and sum all pharmacy values
+        year_totals = revenue_data.groupby('Fiscal_Year')['Value'].sum().reset_index()
+        year_totals = year_totals.sort_values('Fiscal_Year')
+        
+        # Calculate percentage changes
+        periods = []
+        for i, row in year_totals.iterrows():
+            period = f"FY{row['Fiscal_Year']}"
+            revenue = row['Value']
+            
+            # Calculate percentage change from previous period
+            percentage_change = None
+            change_direction = None
+            if i > 0:
+                prev_revenue = year_totals.iloc[i-1]['Value']
+                if prev_revenue > 0:
+                    percentage_change = round(((revenue - prev_revenue) / prev_revenue) * 100, 2)
+                    change_direction = 'increase' if percentage_change > 0 else 'decrease'
+            
+            periods.append({
+                'period': period,
+                'revenue': revenue,
+                'percentage_change': percentage_change,
+                'change_direction': change_direction
+            })
+        
+        # Set current period as the most recent
+        current_period = periods[-1]['period'] if periods else None
+        
+        return {
+            'periods': periods,
+            'current_period': current_period
+        }
+
 # Global instance
 chart_service = ChartService() 

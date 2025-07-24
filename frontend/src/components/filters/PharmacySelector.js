@@ -64,18 +64,7 @@ function PharmacySelector() {
     dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: [] });
   };
 
-  const toggleAcquisitionFilter = () => {
-    const newValue = !state.acquisitionFilter;
-    dispatch({ type: 'SET_ACQUISITION_FILTER', payload: newValue });
-    
-    if (newValue) {
-      // Auto-deselect pipeline pharmacies when acquisition filter is enabled
-      const acquiredPharmacies = state.pharmacies
-        .filter(p => p.status === 'acquired')
-        .map(p => p.name);
-      dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: acquiredPharmacies });
-    }
-  };
+
 
   const acquiredPharmacies = state.pharmacies.filter(p => p.status === 'acquired');
   const pipelinePharmacies = state.pharmacies.filter(p => p.status === 'pipeline');
@@ -87,6 +76,25 @@ function PharmacySelector() {
     
     const clusterPharmacyNames = cluster.pharmacies.map(p => p.name);
     return clusterPharmacyNames.every(name => state.selectedPharmacies.includes(name));
+  };
+
+  // Generate month options for acquisition date selector
+  const generateMonthOptions = () => {
+    const months = [];
+    const startDate = new Date('2024-04-01'); // Apr-24 (FY2025 Q1)
+    const currentDate = new Date();
+    
+    let date = new Date(startDate);
+    while (date.getFullYear() < currentDate.getFullYear() || 
+           (date.getFullYear() === currentDate.getFullYear() && date.getMonth() <= currentDate.getMonth())) {
+      const monthStr = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      const year = date.getFullYear().toString().slice(-2);
+      const value = `${month}-${year}`;
+      months.push({ value, display: monthStr });
+      date.setMonth(date.getMonth() + 1);
+    }
+    return months;
   };
 
   // Helper function to check if a cluster is partially selected
@@ -139,24 +147,42 @@ function PharmacySelector() {
         </div>
       </div>
 
-      {/* Acquisition Filter Toggle */}
-      <div className="flex items-center space-x-3">
-        <label className="flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            checked={state.acquisitionFilter}
-            onChange={toggleAcquisitionFilter}
-            className="sr-only"
-          />
-          <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            state.acquisitionFilter ? 'bg-primary-600' : 'bg-gray-200'
-          }`}>
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              state.acquisitionFilter ? 'translate-x-6' : 'translate-x-1'
-            }`} />
-          </div>
-        </label>
-        <span className="text-sm text-gray-700">From acquisition date only</span>
+      {/* Acquisition Month Selector */}
+      <div className="space-y-2">
+        <label className="text-sm text-gray-700">Include data from month onwards:</label>
+        <select
+          value={state.acquisitionDate || ''}
+          onChange={(e) => {
+            const value = e.target.value;
+            dispatch({ type: 'SET_ACQUISITION_DATE', payload: value });
+            
+            if (value) {
+              // Auto-deselect pipeline pharmacies when acquisition filter is enabled
+              const acquiredPharmacies = state.pharmacies
+                .filter(p => p.status === 'acquired')
+                .map(p => p.name);
+              dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: acquiredPharmacies });
+            }
+          }}
+          className="input-field text-sm w-full"
+        >
+          <option value="">All data (no filter)</option>
+          {generateMonthOptions().map(option => (
+            <option key={option.value} value={option.value}>
+              {option.display}
+            </option>
+          ))}
+        </select>
+        {state.acquisitionDate && (
+          <button
+            onClick={() => {
+              dispatch({ type: 'SET_ACQUISITION_DATE', payload: '' });
+            }}
+            className="btn-secondary text-xs px-3 py-1 w-full"
+          >
+            Clear Filter
+          </button>
+        )}
       </div>
 
       {/* Control Buttons */}

@@ -118,6 +118,26 @@ export const fetchRevenueByPeriod = async (params) => {
   }
 };
 
+export const fetchTotalRevenueData = async (params) => {
+  try {
+    const response = await api.get(API_CONFIG.ENDPOINTS.TOTAL_REVENUE_DATA, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching total revenue data:', error);
+    throw error;
+  }
+};
+
+export const fetchSelectedMetricData = async (params) => {
+  try {
+    const response = await api.get(API_CONFIG.ENDPOINTS.SELECTED_METRIC_DATA, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching selected metric data:', error);
+    throw error;
+  }
+};
+
 export const fetchMonthlyRevenue = async (params) => {
   try {
     const response = await api.get(API_CONFIG.ENDPOINTS.MONTHLY_REVENUE, { params });

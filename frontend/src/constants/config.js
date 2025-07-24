@@ -9,6 +9,8 @@ export const API_CONFIG = {
     METRICS: '/api/metrics',
     REVENUE_DATA: '/api/revenue-data',
     REVENUE_BY_PERIOD: '/api/revenue-by-period',
+    TOTAL_REVENUE_DATA: '/api/total-revenue-data',
+    SELECTED_METRIC_DATA: '/api/selected-metric-data',
     MONTHLY_REVENUE: '/api/monthly-revenue',
     CHART_DATA: '/api/chart-data'
   }

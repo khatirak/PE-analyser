@@ -20,7 +20,7 @@ function GeneralChart() {
   
   const [selectedMetric, setSelectedMetric] = useState('');
   const [showMetricDropdown, setShowMetricDropdown] = useState(false);
-  const [showTotalLine, setShowTotalLine] = useState(true);
+  const [showTotalLine, setShowTotalLine] = useState(false);
   const [showCombinedTotal, setShowCombinedTotal] = useState(false);
   const [currentDate] = useState(new Date());
   const dropdownRef = useRef(null);
@@ -65,7 +65,7 @@ function GeneralChart() {
     // Set default quarter range if not set
     if (!state.quarterRange.start || !state.quarterRange.end) {
       console.log('Setting default quarter range in GeneralChart...');
-      const startQuarter = '2024 Q1';
+      const startQuarter = '2025 Q1';
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
       const month = currentDate.getMonth() + 1;
       const currentQ = month >= 4 && month <= 6 ? 'Q1' : 
@@ -91,7 +91,7 @@ function GeneralChart() {
     // Set default fiscal year range if not set
     if (!state.fiscalYearRange.start || !state.fiscalYearRange.end) {
       console.log('Setting default fiscal year range in GeneralChart...');
-      const startFY = '2024';
+      const startFY = '2025';
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
       
       console.log('Setting default fiscal year range:', { start: startFY, end: currentFY.toString() });
@@ -227,8 +227,8 @@ function GeneralChart() {
       return new Intl.NumberFormat('en-GB', {
         style: 'currency',
         currency: 'GBP',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
       }).format(value);
     }
     
@@ -271,17 +271,27 @@ function GeneralChart() {
   // Calculate y-axis domain with appropriate increments
   const calculateYAxisDomain = () => {
     if (showTotalLine) {
-      // When showing individual pharmacies, calculate based on individual values
-      if (transformedData.length === 0) return [0, 1000000];
+      // When showing total only, calculate based on total values
+      if (finalTotalData.length === 0) return [0, 1000000];
       
-      // Get all individual pharmacy values (excluding totalValue)
-      const allValues = [];
-      transformedData.forEach(item => {
-        chartData.datasets.forEach(dataset => {
-          const value = item[dataset.label] || 0;
-          if (value > 0) allValues.push(value);
+      // For cluster mode, get all cluster values plus combined total (if visible)
+      let allValues = [];
+      if (state.pharmacySelectionMode === 'clusters') {
+        finalTotalData.forEach(item => {
+          Object.keys(item).forEach(key => {
+            if (key.startsWith('cluster_') && item[key] > 0) {
+              allValues.push(item[key]);
+            }
+            // Only include combined total if it's visible
+            if (key === 'total' && item[key] > 0 && showCombinedTotal) {
+              allValues.push(item[key]);
+            }
+          });
         });
-      });
+      } else {
+        // For regular total mode
+        allValues = finalTotalData.map(item => item.total);
+      }
       
       if (allValues.length === 0) return [0, 1000000];
       
@@ -312,27 +322,17 @@ function GeneralChart() {
         return [minDomain, maxDomain];
       }
     } else {
-      // When showing total only, calculate based on total values
-      if (finalTotalData.length === 0) return [0, 1000000];
+      // When showing individual pharmacies, calculate based on individual values
+      if (transformedData.length === 0) return [0, 1000000];
       
-      // For cluster mode, get all cluster values plus combined total (if visible)
-      let allValues = [];
-      if (state.pharmacySelectionMode === 'clusters') {
-        finalTotalData.forEach(item => {
-          Object.keys(item).forEach(key => {
-            if (key.startsWith('cluster_') && item[key] > 0) {
-              allValues.push(item[key]);
-            }
-            // Only include combined total if it's visible
-            if (key === 'total' && item[key] > 0 && showCombinedTotal) {
-              allValues.push(item[key]);
-            }
-          });
+      // Get all individual pharmacy values (excluding totalValue)
+      const allValues = [];
+      transformedData.forEach(item => {
+        chartData.datasets.forEach(dataset => {
+          const value = item[dataset.label] || 0;
+          if (value > 0) allValues.push(value);
         });
-      } else {
-        // For regular total mode
-        allValues = finalTotalData.map(item => item.total);
-      }
+      });
       
       if (allValues.length === 0) return [0, 1000000];
       
@@ -401,7 +401,7 @@ function GeneralChart() {
               {entry.name}: {formatValue(entry.value)}
             </p>
           ))}
-          {showTotalLine && payload.length > 1 && (
+          {!showTotalLine && payload.length > 1 && (
             <div className="mt-2 pt-2 border-t border-gray-200">
               {state.pharmacySelectionMode === 'clusters' ? (
                 <>
@@ -466,7 +466,7 @@ function GeneralChart() {
     const currentDate = new Date();
     let currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
     
-    for (let fy = 2024; fy <= currentFY; fy++) {
+    for (let fy = 2025; fy <= currentFY; fy++) {
       ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
         if (fy === currentFY) {
           const month = currentDate.getMonth() + 1;
@@ -490,7 +490,7 @@ function GeneralChart() {
     const currentDate = new Date();
     let currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
     
-    for (let fy = 2024; fy <= currentFY; fy++) {
+    for (let fy = 2025; fy <= currentFY; fy++) {
       fiscalYears.push({ value: `${fy}`, display: `FY${fy}` });
     }
     return fiscalYears;
@@ -687,7 +687,7 @@ function GeneralChart() {
       <div className="w-full h-[600px]" key={`${state.dateRange.start}-${state.dateRange.end}-${state.quarterRange.start}-${state.quarterRange.end}-${state.fiscalYearRange.start}-${state.fiscalYearRange.end}-${state.viewType}-${JSON.stringify(chartData.labels)}-${showTotalLine}-${showCombinedTotal}`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
-            data={showTotalLine ? transformedData : finalTotalData} 
+            data={showTotalLine ? finalTotalData : transformedData} 
             margin={{ top: 20, right: 40, left: 40, bottom: 20 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -711,6 +711,49 @@ function GeneralChart() {
             <Legend />
             
             {showTotalLine ? (
+              /* Render appropriate total lines based on selection mode */
+              state.pharmacySelectionMode === 'clusters' ? (
+                <>
+                  {/* Individual cluster lines when in cluster mode */}
+                  {getSelectedClusters().map((cluster, index) => (
+                    <Line
+                      key={`cluster_${cluster.name}`}
+                      type="monotone"
+                      dataKey={`cluster_${cluster.name}`}
+                      stroke={clusterColors[index % clusterColors.length]}
+                      strokeWidth={3}
+                      dot={{ fill: clusterColors[index % clusterColors.length], strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7, stroke: clusterColors[index % clusterColors.length], strokeWidth: 2 }}
+                      name={`${cluster.name} Total`}
+                    />
+                  ))}
+                  {/* Combined total line for all clusters - only show if toggle is on */}
+                  {showCombinedTotal && (
+                    <Line
+                      type="monotone"
+                      dataKey="total"
+                      stroke="#1F2937"
+                      strokeWidth={4}
+                      strokeDasharray="8 4"
+                      dot={{ fill: "#1F2937", strokeWidth: 2, r: 6 }}
+                      activeDot={{ r: 8, stroke: "#1F2937", strokeWidth: 2 }}
+                      name="Combined Total"
+                    />
+                  )}
+                </>
+              ) : (
+                /* Single total line when in pharmacy mode */
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#1F2937"
+                  strokeWidth={3}
+                  dot={{ fill: "#1F2937", strokeWidth: 2, r: 5 }}
+                  activeDot={{ r: 7, stroke: "#1F2937", strokeWidth: 2 }}
+                  name="Total"
+                />
+              )
+            ) : (
               <>
                 {/* Individual pharmacy lines only - no dotted total line */}
                 {chartData.datasets.map((dataset, index) => (
@@ -725,49 +768,6 @@ function GeneralChart() {
                   />
                 ))}
               </>
-            ) : (
-              /* Render appropriate total lines based on selection mode */
-              state.pharmacySelectionMode === 'clusters' ? (
-                              <>
-                {/* Individual cluster lines when in cluster mode */}
-                {getSelectedClusters().map((cluster, index) => (
-                  <Line
-                    key={`cluster_${cluster.name}`}
-                    type="monotone"
-                    dataKey={`cluster_${cluster.name}`}
-                    stroke={clusterColors[index % clusterColors.length]}
-                    strokeWidth={3}
-                    dot={{ fill: clusterColors[index % clusterColors.length], strokeWidth: 2, r: 5 }}
-                    activeDot={{ r: 7, stroke: clusterColors[index % clusterColors.length], strokeWidth: 2 }}
-                    name={`${cluster.name} Total`}
-                  />
-                ))}
-                {/* Combined total line for all clusters - only show if toggle is on */}
-                {showCombinedTotal && (
-                  <Line
-                    type="monotone"
-                    dataKey="total"
-                    stroke="#1F2937"
-                    strokeWidth={4}
-                    strokeDasharray="8 4"
-                    dot={{ fill: "#1F2937", strokeWidth: 2, r: 6 }}
-                    activeDot={{ r: 8, stroke: "#1F2937", strokeWidth: 2 }}
-                    name="Combined Total"
-                  />
-                )}
-              </>
-              ) : (
-                /* Single total line when in pharmacy mode */
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="#1F2937"
-                  strokeWidth={3}
-                  dot={{ fill: "#1F2937", strokeWidth: 2, r: 5 }}
-                  activeDot={{ r: 7, stroke: "#1F2937", strokeWidth: 2 }}
-                  name="Total"
-                />
-              )
             )}
           </LineChart>
         </ResponsiveContainer>

@@ -142,7 +142,7 @@ class DataService:
         
         return revenue_data
 
-    def get_chart_data(self, pharmacies=None, metric=None, acquisition_dates=None, acquisition_date=None):
+    def get_chart_data(self, pharmacies=None, metric=None, acquisition_date=None):
         """Get chart data for any metric with optional filters"""
         if self.current_data is None:
             return None
@@ -156,10 +156,6 @@ class DataService:
         # Filter by metric if specified
         if metric:
             chart_data = chart_data[chart_data['Metric'] == metric]
-        
-        # Apply acquisition date filter
-        if acquisition_dates:
-            chart_data = self._apply_acquisition_filter(chart_data, acquisition_dates)
         
         # Apply custom acquisition date filter
         if acquisition_date:
@@ -188,33 +184,21 @@ class DataService:
         return pd.DataFrame(filtered_data) if filtered_data else pd.DataFrame()
     
     def _apply_custom_acquisition_filter(self, revenue_data, acquisition_date):
-        """Apply custom acquisition date filter - only include pharmacies acquired on or before the specified date"""
+        """Apply custom acquisition date filter - include data from the selected month onwards for all pharmacies"""
         if not acquisition_date:
             return revenue_data
         
         from utils.date_utils import parse_date
         
-        # Parse the acquisition date filter
+        # Parse the acquisition date filter (this is now the month to include from)
         filter_date = parse_date(acquisition_date)
         if not filter_date:
             return revenue_data
         
-        # Get unique pharmacies and their acquisition dates
-        pharmacy_acquisitions = self.current_data.groupby('Pharmacy')['Acquisition_Date'].first()
+        # Filter revenue data to only include data from the selected month onwards
+        filtered_data = revenue_data[revenue_data['Date'] >= filter_date]
         
-        # Filter pharmacies that were acquired on or before the filter date
-        acquired_pharmacies = []
-        for pharmacy, acq_date in pharmacy_acquisitions.items():
-            if acq_date and acq_date != 'nan':
-                parsed_acq_date = parse_date(acq_date)
-                if parsed_acq_date and parsed_acq_date <= filter_date:
-                    acquired_pharmacies.append(pharmacy)
-        
-        # Filter revenue data to only include acquired pharmacies
-        if acquired_pharmacies:
-            return revenue_data[revenue_data['Pharmacy'].isin(acquired_pharmacies)]
-        else:
-            return pd.DataFrame()
+        return filtered_data
 
 # Global instance
 data_service = DataService() 

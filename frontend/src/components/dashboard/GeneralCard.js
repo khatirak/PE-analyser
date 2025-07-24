@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useDataContext } from '../../context/DataContext';
-import { fetchRevenueByPeriod } from '../../utils/api';
+import { fetchRevenueByPeriod, fetchTotalRevenueData, fetchSelectedMetricData } from '../../utils/api';
 import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react';
+import TotalRevenueModal from '../common/TotalRevenueModal';
+import SelectedMetricModal from '../common/SelectedMetricModal';
 
 function GeneralCard() {
   const { state } = useDataContext();
   const [revenueData, setRevenueData] = useState(null);
+  const [totalRevenueData, setTotalRevenueData] = useState(null);
+  const [selectedMetricData, setSelectedMetricData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [error, setError] = useState(null);
+  const [showTotalRevenueModal, setShowTotalRevenueModal] = useState(false);
+  const [showSelectedMetricModal, setShowSelectedMetricModal] = useState(false);
 
   useEffect(() => {
-    const loadRevenueData = async () => {
+    const loadData = async () => {
       if (!state.data) {
         console.log('No state.data available');
         return;
@@ -24,33 +30,80 @@ function GeneralCard() {
           view_type: state.viewType
         };
         
-        console.log('Fetching revenue data with params:', params);
-        const data = await fetchRevenueByPeriod(params);
-        console.log('Received revenue data:', data);
-        setRevenueData(data);
+        // Add range parameters based on view type
+        if (state.viewType === 'month') {
+          if (state.dateRange.start) {
+            params.date_range_start = state.dateRange.start;
+          }
+          if (state.dateRange.end) {
+            params.date_range_end = state.dateRange.end;
+          }
+        } else if (state.viewType === 'quarter') {
+          if (state.quarterRange.start) {
+            params.quarter_range_start = state.quarterRange.start;
+          }
+          if (state.quarterRange.end) {
+            params.quarter_range_end = state.quarterRange.end;
+          }
+        } else if (state.viewType === 'fiscal_year') {
+          if (state.fiscalYearRange.start) {
+            params.fiscal_year_range_start = state.fiscalYearRange.start;
+          }
+          if (state.fiscalYearRange.end) {
+            params.fiscal_year_range_end = state.fiscalYearRange.end;
+          }
+        }
+        
+        console.log('Fetching data with params:', params);
+        
+        // Fetch data for selected metric, total revenue, and regular revenue data
+        const [revenueResult, totalRevenueResult, selectedMetricResult] = await Promise.all([
+          fetchRevenueByPeriod(params),
+          fetchTotalRevenueData(params),
+          fetchSelectedMetricData({ ...params, metric: state.selectedMetric || 'Total Revenue' })
+        ]);
+        
+        console.log('Received revenue data:', revenueResult);
+        console.log('Received total revenue data:', totalRevenueResult);
+        console.log('Received selected metric data:', selectedMetricResult);
+        
+        setRevenueData(revenueResult);
+        setTotalRevenueData(totalRevenueResult);
+        setSelectedMetricData(selectedMetricResult);
         
         // Set the current period as default selected
-        if (data.periods && data.periods.length > 0) {
-          setSelectedPeriod(data.current_period);
+        if (totalRevenueResult.periods && totalRevenueResult.periods.length > 0) {
+          setSelectedPeriod(totalRevenueResult.current_period);
         }
       } catch (error) {
-        console.error('Error loading revenue data:', error);
+        console.error('Error loading data:', error);
         setError(error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    loadRevenueData();
-  }, [state.data, state.viewType]);
+    loadData();
+  }, [state.data, state.viewType, state.dateRange, state.quarterRange, state.fiscalYearRange, state.selectedMetric]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency: 'GBP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(value);
+  };
+
+  const formatValue = (value, metric) => {
+    // Check if the metric is currency-based
+    const currencyMetrics = ['Total Revenue', 'Revenue', 'Sales', 'Income'];
+    if (currencyMetrics.some(m => metric.includes(m))) {
+      return formatCurrency(value);
+    }
+    
+    // For non-currency metrics, format as number
+    return new Intl.NumberFormat('en-GB').format(value);
   };
 
   const getViewTypeLabel = () => {
@@ -66,24 +119,29 @@ function GeneralCard() {
     }
   };
 
-  const renderCard = (title, value, icon, percentageChange, changeDirection, subtitle) => (
-    <div className="card flex-1">
+  const renderCard = (title, value, icon, percentageChange, changeDirection, subtitle, onClick = null) => (
+    <div 
+      className={`card flex-1 ${onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium text-gray-700">Select {getViewTypeLabel()}:</label>
-          <select
-            value={selectedPeriod || ''}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="input-field w-auto text-sm"
-          >
-            {revenueData?.periods?.map((period) => (
-              <option key={period.period} value={period.period}>
-                {period.period}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!onClick && (
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">Select {getViewTypeLabel()}:</label>
+            <select
+              value={selectedPeriod || ''}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              className="input-field w-auto text-sm"
+            >
+              {totalRevenueData?.periods?.map((period) => (
+                <option key={period.period} value={period.period}>
+                  {period.period}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between">
@@ -111,7 +169,7 @@ function GeneralCard() {
               ) : (
                 <TrendingDown className="h-4 w-4 mr-1" />
               )}
-              {Math.abs(percentageChange)}%
+              {Math.abs(percentageChange).toFixed(2)}%
             </div>
             <p className="text-xs text-gray-500">
               vs previous {getViewTypeLabel().toLowerCase()}
@@ -173,7 +231,7 @@ function GeneralCard() {
     );
   }
 
-  if (!revenueData || !revenueData.periods || revenueData.periods.length === 0) {
+  if (!totalRevenueData || !totalRevenueData.periods || totalRevenueData.periods.length === 0) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="card">
@@ -190,7 +248,8 @@ function GeneralCard() {
     );
   }
 
-  const currentPeriodData = revenueData.periods.find(p => p.period === selectedPeriod);
+  const currentPeriodData = totalRevenueData.periods.find(p => p.period === selectedPeriod);
+  const selectedMetricPeriodData = selectedMetricData?.periods?.find(p => p.period === selectedPeriod);
   
   if (!currentPeriodData) {
     return (
@@ -209,33 +268,53 @@ function GeneralCard() {
     );
   }
 
-  // For now, we'll use the same revenue data for both cards
-  // In the future, you can fetch different metrics for the left card
-  const selectedMetricValue = formatCurrency(currentPeriodData.revenue);
+  // For the left card, use the selected metric data
+  const selectedMetricValue = selectedMetricPeriodData 
+    ? formatValue(selectedMetricPeriodData.revenue, state.selectedMetric)
+    : formatValue(0, state.selectedMetric);
+  
+  // For the right card, always show total revenue for the current period
   const totalRevenueValue = formatCurrency(currentPeriodData.revenue);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      {/* Left Card - Selected Metric */}
-      {renderCard(
-        "Selected Metric",
-        selectedMetricValue,
-        <BarChart3 className="h-6 w-6 text-blue-600" />,
-        currentPeriodData.percentage_change,
-        currentPeriodData.change_direction,
-        selectedPeriod
-      )}
-      
-      {/* Right Card - Total Revenue */}
-      {renderCard(
-        "Total Revenue",
-        totalRevenueValue,
-        <DollarSign className="h-6 w-6 text-green-600" />,
-        currentPeriodData.percentage_change,
-        currentPeriodData.change_direction,
-        selectedPeriod
-      )}
-    </div>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Left Card - Selected Metric (Clickable) */}
+        {renderCard(
+          state.selectedMetric || "Selected Metric",
+          selectedMetricValue,
+          <BarChart3 className="h-6 w-6 text-blue-600" />,
+          selectedMetricPeriodData?.percentage_change,
+          selectedMetricPeriodData?.change_direction,
+          "Click to view all periods",
+          () => setShowSelectedMetricModal(true)
+        )}
+        
+        {/* Right Card - Total Revenue (Clickable) */}
+        {renderCard(
+          "Total Revenue",
+          totalRevenueValue,
+          <DollarSign className="h-6 w-6 text-green-600" />,
+          currentPeriodData.percentage_change,
+          currentPeriodData.change_direction,
+          "Click to view all periods",
+          () => setShowTotalRevenueModal(true)
+        )}
+      </div>
+
+      {/* Total Revenue Modal */}
+      <TotalRevenueModal 
+        isOpen={showTotalRevenueModal}
+        onClose={() => setShowTotalRevenueModal(false)}
+      />
+
+      {/* Selected Metric Modal */}
+      <SelectedMetricModal 
+        isOpen={showSelectedMetricModal}
+        onClose={() => setShowSelectedMetricModal(false)}
+        selectedMetric={state.selectedMetric || 'Total Revenue'}
+      />
+    </>
   );
 }
 

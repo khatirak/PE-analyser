@@ -33,9 +33,9 @@ function RangeSelector() {
       dispatch({ type: 'SET_DATE_RANGE', payload: { start: startValue, end: endValue } });
     }
     
-    // Set quarter range: start from Q1 FY2024, end to one quarter before current
+    // Set quarter range: start from Q1 FY2025, end to one quarter before current
     if (!state.quarterRange.start || !state.quarterRange.end) {
-      const startQuarter = '2024 Q1';
+      const startQuarter = '2025 Q1';
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
       const month = currentDate.getMonth() + 1;
       const currentQ = month >= 4 && month <= 6 ? 'Q1' : 
@@ -58,7 +58,7 @@ function RangeSelector() {
     
     // Set fiscal year range: start from 2024, end to current fiscal year
     if (!state.fiscalYearRange.start || !state.fiscalYearRange.end) {
-      const startFY = '2024';
+      const startFY = '2025';
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
       dispatch({ type: 'SET_FISCAL_YEAR_RANGE', payload: { start: startFY, end: currentFY.toString() } });
     }
@@ -129,7 +129,7 @@ function RangeSelector() {
       
       dispatch({ type: 'SET_DATE_RANGE', payload: { start: startValue, end: endValue } });
     } else if (state.viewType === 'quarter') {
-      const startQuarter = '2024 Q1';
+      const startQuarter = '2025 Q1';
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
       const month = currentDate.getMonth() + 1;
       const currentQ = month >= 4 && month <= 6 ? 'Q1' : 
@@ -150,7 +150,7 @@ function RangeSelector() {
       dispatch({ type: 'SET_QUARTER_RANGE', payload: { start: startQuarter, end: endQuarter } });
     } else if (state.viewType === 'fiscal_year') {
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
-      dispatch({ type: 'SET_FISCAL_YEAR_RANGE', payload: { start: '2024', end: currentFY.toString() } });
+      dispatch({ type: 'SET_FISCAL_YEAR_RANGE', payload: { start: '2025', end: currentFY.toString() } });
     }
   };
 
@@ -182,7 +182,7 @@ function RangeSelector() {
     const currentDate = new Date();
     let currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
     
-    for (let fy = 2024; fy <= currentFY; fy++) {
+    for (let fy = 2025; fy <= currentFY; fy++) {
       ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => {
         if (fy === currentFY) {
           const month = currentDate.getMonth() + 1;
@@ -205,7 +205,7 @@ function RangeSelector() {
     const currentDate = new Date();
     let currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
     
-    for (let fy = 2024; fy <= currentFY; fy++) {
+    for (let fy = 2025; fy <= currentFY; fy++) {
       fiscalYears.push({ value: `${fy}`, display: `FY${fy}` });
     }
     return fiscalYears;

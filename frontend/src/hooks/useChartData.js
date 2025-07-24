@@ -16,7 +16,7 @@ export const useChartData = () => {
     const params = {
       view_type: state.viewType,
       'pharmacies[]': state.selectedPharmacies,
-      acquisition_filter: state.acquisitionFilter,
+      acquisition_date: state.acquisitionDate,
       metric: state.selectedMetric
     };
 
@@ -51,7 +51,7 @@ export const useChartData = () => {
     state.selectedPharmacies, 
     state.selectedMetric,
     state.viewType, 
-    state.acquisitionFilter, 
+    state.acquisitionDate, 
     state.dateRange, 
     state.quarterRange, 
     state.fiscalYearRange

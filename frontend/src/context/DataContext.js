@@ -12,7 +12,6 @@ const initialState = {
   selectedPharmacies: [],
   selectedMetric: '',
   viewType: 'month',
-  acquisitionFilter: false,
   acquisitionDate: '',
   dateRange: { start: '', end: '' },
   quarterRange: { start: '', end: '' },
@@ -41,8 +40,6 @@ function dataReducer(state, action) {
       return { ...state, selectedMetric: action.payload };
     case 'SET_VIEW_TYPE':
       return { ...state, viewType: action.payload };
-    case 'SET_ACQUISITION_FILTER':
-      return { ...state, acquisitionFilter: action.payload };
     case 'SET_DATE_RANGE':
       return { ...state, dateRange: action.payload };
     case 'SET_QUARTER_RANGE':
