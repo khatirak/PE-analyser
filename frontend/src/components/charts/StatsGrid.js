@@ -14,7 +14,26 @@ function StatsGrid() {
   console.log('StatsGrid - state.stats:', state.stats);
   if (!state.stats) {
     console.log('StatsGrid - No stats available');
-    return null;
+    return (
+      <div className="text-center py-12">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-8">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="p-3 bg-blue-100 rounded-full">
+              <BarChart3 className="h-8 w-8 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Data Available</h3>
+              <p className="text-gray-600 mb-4">
+                Upload a CSV file to start analyzing your pharmacy data.
+              </p>
+              <p className="text-sm text-gray-500">
+                Click the "Upload CSV" button in the top right to get started.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const stats = [

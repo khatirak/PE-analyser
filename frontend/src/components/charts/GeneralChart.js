@@ -124,7 +124,12 @@ function GeneralChart() {
   if (!chartData || !chartData.labels || chartData.labels.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-gray-500">No data available for the selected filters</div>
+        <div className="text-center">
+          <div className="text-gray-500 mb-2">No data available</div>
+          <div className="text-sm text-gray-400">
+            {!state.stats ? 'Upload a CSV file to get started' : 'No data matches the selected filters'}
+          </div>
+        </div>
       </div>
     );
   }

@@ -219,12 +219,18 @@ function GeneralCard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="card">
           <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">No data available</div>
+            <div className="text-center">
+              <div className="text-gray-500 mb-1">No data available</div>
+              <div className="text-sm text-gray-400">Upload a CSV file to get started</div>
+            </div>
           </div>
         </div>
         <div className="card">
           <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">No data available</div>
+            <div className="text-center">
+              <div className="text-gray-500 mb-1">No data available</div>
+              <div className="text-sm text-gray-400">Upload a CSV file to get started</div>
+            </div>
           </div>
         </div>
       </div>
@@ -236,12 +242,18 @@ function GeneralCard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="card">
           <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">No periods available</div>
+            <div className="text-center">
+              <div className="text-gray-500 mb-1">No periods available</div>
+              <div className="text-sm text-gray-400">Upload a CSV file to get started</div>
+            </div>
           </div>
         </div>
         <div className="card">
           <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">No periods available</div>
+            <div className="text-center">
+              <div className="text-gray-500 mb-1">No periods available</div>
+              <div className="text-sm text-gray-400">Upload a CSV file to get started</div>
+            </div>
           </div>
         </div>
       </div>

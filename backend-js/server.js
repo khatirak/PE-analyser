@@ -74,34 +74,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', message: 'Backend is running' });
 });
 
-// Load sample data if available (skipped in production/serverless)
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  const sampleCsvPath = path.join(__dirname, '..', 'backend', 'uploads', 'Cur8_formulaKhatira.csv');
-  if (fs.existsSync(sampleCsvPath)) {
-    try {
-      const sampleFile = {
-        stream: fs.createReadStream(sampleCsvPath),
-        originalname: 'Cur8_formulaKhatira.csv'
-      };
-      
-      dataService.loadData(sampleFile)
-        .then(result => {
-          if (result.success) {
-            console.log(`✅ Sample data loaded: ${result.message}`);
-          } else {
-            console.log(`⚠️  Could not load sample data: ${result.message}`);
-          }
-        })
-        .catch(error => {
-          console.log(`⚠️  Error loading sample data: ${error.message}`);
-        });
-    } catch (error) {
-      console.log(`⚠️  Error loading sample data: ${error.message}`);
-    }
-  }
-} else {
-  console.log('⚠️  Skipping sample data load in production/serverless environment');
-}
+// Sample data loading disabled - users must upload their own data
+console.log('📊 Sample data loading disabled - users must upload their own CSV file');
 
 // Serve static files for React app (if needed)
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'build')));
