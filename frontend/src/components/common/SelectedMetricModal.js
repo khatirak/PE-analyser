@@ -189,33 +189,33 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: pass
                             {formatValue(period.selectedMetricValue, selectedMetric)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {period.selectedMetricPercentageChange !== null ? (
+                            {period.percentage_change !== null ? (
                               <span className={`font-medium ${
-                                period.selectedMetricChangeDirection === 'increase' 
+                                period.change_direction === 'increase' 
                                   ? 'text-green-600' 
                                   : 'text-red-600'
                               }`}>
-                                {period.selectedMetricChangeDirection === 'increase' ? '+' : ''}
-                                {period.selectedMetricPercentageChange.toFixed(2)}%
+                                {period.change_direction === 'increase' ? '+' : ''}
+                                {period.percentage_change.toFixed(2)}%
                               </span>
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            {period.selectedMetricPercentageChange !== null ? (
+                            {period.percentage_change !== null ? (
                               <div className={`flex items-center ${
-                                period.selectedMetricChangeDirection === 'increase' 
+                                period.change_direction === 'increase' 
                                   ? 'text-green-600' 
                                   : 'text-red-600'
                               }`}>
-                                {period.selectedMetricChangeDirection === 'increase' ? (
+                                {period.change_direction === 'increase' ? (
                                   <TrendingUp className="h-4 w-4 mr-1" />
                                 ) : (
                                   <TrendingDown className="h-4 w-4 mr-1" />
                                 )}
                                 <span className="text-sm font-medium">
-                                  {period.selectedMetricChangeDirection === 'increase' ? 'Growth' : 'Decline'}
+                                  {period.change_direction === 'increase' ? 'Growth' : 'Decline'}
                                 </span>
                               </div>
                             ) : (

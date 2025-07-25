@@ -196,34 +196,34 @@ function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) 
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {formatCurrency(period.revenue || 0)}
                             </td>
-                                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {period.totalRevenuePercentageChange !== null && period.totalRevenuePercentageChange !== undefined ? (
-                              <span className={`font-medium ${
-                                period.totalRevenueChangeDirection === 'increase'
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
-                              }`}>
-                                {period.totalRevenueChangeDirection === 'increase' ? '+' : ''}
-                                {Number(period.totalRevenuePercentageChange).toFixed(1)}%
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {period.totalRevenuePercentageChange !== null && period.totalRevenuePercentageChange !== undefined ? (
-                                <div className={`flex items-center ${
-                                  period.totalRevenueChangeDirection === 'increase' 
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {period.percentage_change !== null && period.percentage_change !== undefined ? (
+                                <span className={`font-medium ${
+                                  period.change_direction === 'increase' 
                                     ? 'text-green-600' 
                                     : 'text-red-600'
                                 }`}>
-                                  {period.totalRevenueChangeDirection === 'increase' ? (
+                                  {period.change_direction === 'increase' ? '+' : ''}
+                                  {Number(period.percentage_change).toFixed(1)}%
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {period.percentage_change !== null && period.percentage_change !== undefined ? (
+                                <div className={`flex items-center ${
+                                  period.change_direction === 'increase' 
+                                    ? 'text-green-600' 
+                                    : 'text-red-600'
+                                }`}>
+                                  {period.change_direction === 'increase' ? (
                                     <TrendingUp className="h-4 w-4 mr-1" />
                                   ) : (
                                     <TrendingDown className="h-4 w-4 mr-1" />
                                   )}
                                   <span className="text-sm font-medium">
-                                    {period.totalRevenueChangeDirection === 'increase' ? 'Growth' : 'Decline'}
+                                    {period.change_direction === 'increase' ? 'Growth' : 'Decline'}
                                   </span>
                                 </div>
                               ) : (

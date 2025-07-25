@@ -21,7 +21,12 @@ function GeneralCard() {
     console.log('🔍 Processing chart data for cards:', {
       labels: state.chartData.labels,
       datasets: state.chartData.datasets.length,
-      selectedMetric: state.selectedMetric
+      selectedMetric: state.selectedMetric,
+      availableDatasets: state.chartData.datasets.map(d => ({
+        label: d.label,
+        dataLength: d.data.length,
+        sampleData: d.data.slice(0, 3) // First 3 values for debugging
+      }))
     });
 
     const periods = state.chartData.labels.map((label, index) => {
@@ -32,17 +37,56 @@ function GeneralCard() {
 
       // Calculate selected metric value for this period
       let selectedMetricValue = 0;
-      if (state.selectedMetric) {
-        // Find the dataset that matches the selected metric
-        const metricDataset = state.chartData.datasets.find(dataset => 
+      if (state.selectedMetric && state.selectedMetric !== 'Total Revenue') {
+        // Find the dataset that matches the selected metric (case-insensitive and flexible matching)
+        let metricDataset = state.chartData.datasets.find(dataset => 
           dataset.label === state.selectedMetric
         );
+        
+        // If exact match not found, try case-insensitive match
+        if (!metricDataset) {
+          metricDataset = state.chartData.datasets.find(dataset => 
+            dataset.label.toLowerCase() === state.selectedMetric.toLowerCase()
+          );
+        }
+        
+        // If still not found, try partial match
+        if (!metricDataset) {
+          metricDataset = state.chartData.datasets.find(dataset => 
+            dataset.label.toLowerCase().includes(state.selectedMetric.toLowerCase()) ||
+            state.selectedMetric.toLowerCase().includes(dataset.label.toLowerCase())
+          );
+        }
+        
+        // Debug logging for metric matching
+        if (index === 0) { // Only log once per period
+          console.log('🔍 Metric matching debug:', {
+            selectedMetric: state.selectedMetric,
+            availableDatasets: state.chartData.datasets.map(d => d.label),
+            foundDataset: metricDataset ? metricDataset.label : 'NOT FOUND',
+            datasetData: metricDataset ? metricDataset.data : 'NO DATA'
+          });
+        }
+        
         selectedMetricValue = metricDataset ? (metricDataset.data[index] || 0) : 0;
+        
+        // Convert to number if it's a string
+        if (typeof selectedMetricValue === 'string') {
+          selectedMetricValue = parseFloat(selectedMetricValue) || 0;
+        }
+        
+        // Debug logging for selected metric value
+        if (index === 0) {
+          console.log('📊 Selected metric value for period', label, ':', selectedMetricValue);
+        }
+      } else {
+        // If no specific metric selected or it's "Total Revenue", use total
+        selectedMetricValue = totalRevenue;
       }
 
-      // Calculate percentage change for total revenue (right card)
-      let totalRevenuePercentageChange = null;
-      let totalRevenueChangeDirection = null;
+      // Calculate percentage change from previous period
+      let percentageChange = null;
+      let changeDirection = null;
       
       if (index > 0) {
         const previousTotalRevenue = state.chartData.datasets.reduce((sum, dataset) => {
@@ -50,27 +94,8 @@ function GeneralCard() {
         }, 0);
         
         if (previousTotalRevenue > 0) {
-          totalRevenuePercentageChange = ((totalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100;
-          totalRevenueChangeDirection = totalRevenuePercentageChange >= 0 ? 'increase' : 'decrease';
-        }
-      }
-
-      // Calculate percentage change for selected metric (left card)
-      let selectedMetricPercentageChange = null;
-      let selectedMetricChangeDirection = null;
-      
-      if (index > 0 && state.selectedMetric) {
-        const metricDataset = state.chartData.datasets.find(dataset => 
-          dataset.label === state.selectedMetric
-        );
-        if (metricDataset) {
-          const previousMetricValue = metricDataset.data[index - 1] || 0;
-          const currentMetricValue = metricDataset.data[index] || 0;
-          
-          if (previousMetricValue > 0) {
-            selectedMetricPercentageChange = ((currentMetricValue - previousMetricValue) / previousMetricValue) * 100;
-            selectedMetricChangeDirection = selectedMetricPercentageChange >= 0 ? 'increase' : 'decrease';
-          }
+          percentageChange = ((totalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100;
+          changeDirection = percentageChange >= 0 ? 'increase' : 'decrease';
         }
       }
 
@@ -78,10 +103,8 @@ function GeneralCard() {
         period: label,
         revenue: totalRevenue,
         selectedMetricValue: selectedMetricValue,
-        totalRevenuePercentageChange: totalRevenuePercentageChange,
-        totalRevenueChangeDirection: totalRevenueChangeDirection,
-        selectedMetricPercentageChange: selectedMetricPercentageChange,
-        selectedMetricChangeDirection: selectedMetricChangeDirection
+        percentage_change: percentageChange,
+        change_direction: changeDirection
       };
     });
 
@@ -97,8 +120,13 @@ function GeneralCard() {
 
   // Set default selected period when data changes
   useEffect(() => {
-    if (processedData && processedData.current_period && !selectedPeriod) {
-      setSelectedPeriod(processedData.current_period);
+    if (processedData && processedData.current_period) {
+      // Always set to current period when data changes, or if selected period doesn't exist in new data
+      const periodExists = processedData.periods.some(p => p.period === selectedPeriod);
+      if (!selectedPeriod || !periodExists) {
+        console.log('🔄 Setting selected period to:', processedData.current_period);
+        setSelectedPeriod(processedData.current_period);
+      }
     }
   }, [processedData, selectedPeriod]);
 
@@ -236,9 +264,68 @@ function GeneralCard() {
     );
   }
 
+  // Debug period selection
+  console.log('🔍 Period selection debug:', {
+    selectedPeriod,
+    availablePeriods: processedData.periods.map(p => p.period),
+    currentPeriod: processedData.current_period,
+    periodsLength: processedData.periods.length
+  });
+
   const currentPeriodData = processedData.periods.find(p => p.period === selectedPeriod);
   
   if (!currentPeriodData) {
+    console.log('❌ No data found for selected period:', selectedPeriod);
+    console.log('📊 Available periods:', processedData.periods.map(p => p.period));
+    
+    // Try to use the current period as fallback
+    const fallbackPeriodData = processedData.periods.find(p => p.period === processedData.current_period);
+    if (fallbackPeriodData) {
+      console.log('✅ Using fallback period:', processedData.current_period);
+      return (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Left Card - Selected Metric (Clickable) */}
+            {renderCard(
+              state.selectedMetric || "Selected Metric",
+              formatValue(fallbackPeriodData.selectedMetricValue, state.selectedMetric),
+              <BarChart3 className="h-6 w-6 text-blue-600" />,
+              fallbackPeriodData.percentage_change,
+              fallbackPeriodData.change_direction,
+              "Click to view all periods",
+              () => setShowSelectedMetricModal(true)
+            )}
+            
+            {/* Right Card - Total Revenue (Clickable) */}
+            {renderCard(
+              "Total Revenue",
+              formatCurrency(fallbackPeriodData.revenue),
+              <DollarSign className="h-6 w-6 text-green-600" />,
+              fallbackPeriodData.percentage_change,
+              fallbackPeriodData.change_direction,
+              "Click to view all periods",
+              () => setShowTotalRevenueModal(true)
+            )}
+          </div>
+
+          {/* Total Revenue Modal */}
+          <TotalRevenueModal 
+            isOpen={showTotalRevenueModal}
+            onClose={() => setShowTotalRevenueModal(false)}
+            revenueData={processedData}
+          />
+
+          {/* Selected Metric Modal */}
+          <SelectedMetricModal 
+            isOpen={showSelectedMetricModal}
+            onClose={() => setShowSelectedMetricModal(false)}
+            selectedMetric={state.selectedMetric || 'Total Revenue'}
+            metricData={processedData}
+          />
+        </>
+      );
+    }
+    
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="card">
@@ -261,6 +348,24 @@ function GeneralCard() {
   // For the right card, always show total revenue for the current period
   const totalRevenueValue = formatCurrency(currentPeriodData.revenue);
 
+  // Calculate percentage change for selected metric (left card)
+  let selectedMetricPercentageChange = null;
+  let selectedMetricChangeDirection = null;
+  
+  if (processedData.periods.length > 1) {
+    const currentIndex = processedData.periods.findIndex(p => p.period === selectedPeriod);
+    if (currentIndex > 0) {
+      const previousPeriod = processedData.periods[currentIndex - 1];
+      const currentValue = currentPeriodData.selectedMetricValue;
+      const previousValue = previousPeriod.selectedMetricValue;
+      
+      if (previousValue > 0) {
+        selectedMetricPercentageChange = ((currentValue - previousValue) / previousValue) * 100;
+        selectedMetricChangeDirection = selectedMetricPercentageChange >= 0 ? 'increase' : 'decrease';
+      }
+    }
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -269,8 +374,8 @@ function GeneralCard() {
           state.selectedMetric || "Selected Metric",
           selectedMetricValue,
           <BarChart3 className="h-6 w-6 text-blue-600" />,
-          currentPeriodData.selectedMetricPercentageChange,
-          currentPeriodData.selectedMetricChangeDirection,
+          selectedMetricPercentageChange,
+          selectedMetricChangeDirection,
           "Click to view all periods",
           () => setShowSelectedMetricModal(true)
         )}
@@ -280,8 +385,8 @@ function GeneralCard() {
           "Total Revenue",
           totalRevenueValue,
           <DollarSign className="h-6 w-6 text-green-600" />,
-          currentPeriodData.totalRevenuePercentageChange,
-          currentPeriodData.totalRevenueChangeDirection,
+          currentPeriodData.percentage_change,
+          currentPeriodData.change_direction,
           "Click to view all periods",
           () => setShowTotalRevenueModal(true)
         )}

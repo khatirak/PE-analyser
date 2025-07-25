@@ -51,15 +51,15 @@ function PharmacySelector() {
   const selectAll = () => {
     if (selectionMode === 'pharmacies') {
       if (state.pharmacies && Array.isArray(state.pharmacies)) {
-        dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: state.pharmacies.map(p => p.name) });
+      dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: state.pharmacies.map(p => p.name) });
       }
     } else {
       // Select all pharmacies from all clusters
       if (state.clusters && Array.isArray(state.clusters)) {
-        const allPharmacyNames = state.clusters.flatMap(cluster => 
+      const allPharmacyNames = state.clusters.flatMap(cluster => 
           cluster.pharmacies && Array.isArray(cluster.pharmacies) ? cluster.pharmacies.map(p => p.name) : []
-        );
-        dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: allPharmacyNames });
+      );
+      dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: allPharmacyNames });
       }
     }
   };
