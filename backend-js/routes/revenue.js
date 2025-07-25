@@ -30,9 +30,24 @@ router.get('/revenue', (req, res) => {
     // Return a mock structure for now to prevent the "periods" error
     const mockResponse = {
       periods: [
-        { period: '2024-01', revenue: 100000 },
-        { period: '2024-02', revenue: 120000 },
-        { period: '2024-03', revenue: 110000 }
+        { 
+          period: '2024-01', 
+          revenue: 100000,
+          percentage_change: null,
+          change_direction: null
+        },
+        { 
+          period: '2024-02', 
+          revenue: 120000,
+          percentage_change: 20.0,
+          change_direction: 'increase'
+        },
+        { 
+          period: '2024-03', 
+          revenue: 110000,
+          percentage_change: -8.3,
+          change_direction: 'decrease'
+        }
       ],
       current_period: '2024-03',
       total_revenue: 330000

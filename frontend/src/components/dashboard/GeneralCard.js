@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDataContext } from '../../context/DataContext';
-import { fetchRevenueByPeriod, fetchTotalRevenueData, fetchSelectedMetricData } from '../../utils/api';
 import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react';
 import TotalRevenueModal from '../common/TotalRevenueModal';
 import SelectedMetricModal from '../common/SelectedMetricModal';
@@ -8,83 +7,100 @@ import SelectedMetricModal from '../common/SelectedMetricModal';
 function GeneralCard() {
   const { state } = useDataContext();
 
-  const [totalRevenueData, setTotalRevenueData] = useState(null);
-  const [selectedMetricData, setSelectedMetricData] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
-  const [error, setError] = useState(null);
   const [showTotalRevenueModal, setShowTotalRevenueModal] = useState(false);
   const [showSelectedMetricModal, setShowSelectedMetricModal] = useState(false);
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (!state.data) {
-        console.log('No state.data available');
-        return;
+  // Process chart data to create period-based data for cards
+  const processedData = useMemo(() => {
+    if (!state.chartData || !state.chartData.labels || !state.chartData.datasets) {
+      console.log('No chart data available for processing');
+      return null;
+    }
+
+    console.log('🔍 Processing chart data for cards:', {
+      labels: state.chartData.labels,
+      datasets: state.chartData.datasets.length,
+      selectedMetric: state.selectedMetric
+    });
+
+    const periods = state.chartData.labels.map((label, index) => {
+      // Calculate total revenue for this period (sum of all datasets)
+      const totalRevenue = state.chartData.datasets.reduce((sum, dataset) => {
+        return sum + (dataset.data[index] || 0);
+      }, 0);
+
+      // Calculate selected metric value for this period
+      let selectedMetricValue = 0;
+      if (state.selectedMetric) {
+        // Find the dataset that matches the selected metric
+        const metricDataset = state.chartData.datasets.find(dataset => 
+          dataset.label === state.selectedMetric
+        );
+        selectedMetricValue = metricDataset ? (metricDataset.data[index] || 0) : 0;
       }
+
+      // Calculate percentage change for total revenue (right card)
+      let totalRevenuePercentageChange = null;
+      let totalRevenueChangeDirection = null;
       
-      setLoading(true);
-      setError(null);
-      try {
-        const params = {
-          view_type: state.viewType
-        };
+      if (index > 0) {
+        const previousTotalRevenue = state.chartData.datasets.reduce((sum, dataset) => {
+          return sum + (dataset.data[index - 1] || 0);
+        }, 0);
         
-        // Add range parameters based on view type
-        if (state.viewType === 'month') {
-          if (state.dateRange.start) {
-            params.date_range_start = state.dateRange.start;
-          }
-          if (state.dateRange.end) {
-            params.date_range_end = state.dateRange.end;
-          }
-        } else if (state.viewType === 'quarter') {
-          if (state.quarterRange.start) {
-            params.quarter_range_start = state.quarterRange.start;
-          }
-          if (state.quarterRange.end) {
-            params.quarter_range_end = state.quarterRange.end;
-          }
-        } else if (state.viewType === 'fiscal_year') {
-          if (state.fiscalYearRange.start) {
-            params.fiscal_year_range_start = state.fiscalYearRange.start;
-          }
-          if (state.fiscalYearRange.end) {
-            params.fiscal_year_range_end = state.fiscalYearRange.end;
-          }
+        if (previousTotalRevenue > 0) {
+          totalRevenuePercentageChange = ((totalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100;
+          totalRevenueChangeDirection = totalRevenuePercentageChange >= 0 ? 'increase' : 'decrease';
         }
-        
-        console.log('Fetching data with params:', params);
-        
-        // Fetch data for selected metric, total revenue, and regular revenue data
-        const [revenueResult, totalRevenueResult, selectedMetricResult] = await Promise.all([
-          fetchRevenueByPeriod(params),
-          fetchTotalRevenueData(params),
-          fetchSelectedMetricData({ ...params, metric: state.selectedMetric || 'Total Revenue' })
-        ]);
-        
-        console.log('Received revenue data:', revenueResult);
-        console.log('Received total revenue data:', totalRevenueResult);
-        console.log('Received selected metric data:', selectedMetricResult);
-        
-
-        setTotalRevenueData(totalRevenueResult);
-        setSelectedMetricData(selectedMetricResult);
-        
-        // Set the current period as default selected
-        if (totalRevenueResult.periods && totalRevenueResult.periods.length > 0) {
-          setSelectedPeriod(totalRevenueResult.current_period);
-        }
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    loadData();
-  }, [state.data, state.viewType, state.dateRange, state.quarterRange, state.fiscalYearRange, state.selectedMetric]);
+      // Calculate percentage change for selected metric (left card)
+      let selectedMetricPercentageChange = null;
+      let selectedMetricChangeDirection = null;
+      
+      if (index > 0 && state.selectedMetric) {
+        const metricDataset = state.chartData.datasets.find(dataset => 
+          dataset.label === state.selectedMetric
+        );
+        if (metricDataset) {
+          const previousMetricValue = metricDataset.data[index - 1] || 0;
+          const currentMetricValue = metricDataset.data[index] || 0;
+          
+          if (previousMetricValue > 0) {
+            selectedMetricPercentageChange = ((currentMetricValue - previousMetricValue) / previousMetricValue) * 100;
+            selectedMetricChangeDirection = selectedMetricPercentageChange >= 0 ? 'increase' : 'decrease';
+          }
+        }
+      }
+
+      return {
+        period: label,
+        revenue: totalRevenue,
+        selectedMetricValue: selectedMetricValue,
+        totalRevenuePercentageChange: totalRevenuePercentageChange,
+        totalRevenueChangeDirection: totalRevenueChangeDirection,
+        selectedMetricPercentageChange: selectedMetricPercentageChange,
+        selectedMetricChangeDirection: selectedMetricChangeDirection
+      };
+    });
+
+    // Find current period (last period with data)
+    const currentPeriod = periods.length > 0 ? periods[periods.length - 1].period : null;
+
+    return {
+      periods,
+      current_period: currentPeriod,
+      total_revenue: periods.reduce((sum, p) => sum + p.revenue, 0)
+    };
+  }, [state.chartData, state.selectedMetric]);
+
+  // Set default selected period when data changes
+  useEffect(() => {
+    if (processedData && processedData.current_period && !selectedPeriod) {
+      setSelectedPeriod(processedData.current_period);
+    }
+  }, [processedData, selectedPeriod]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-GB', {
@@ -134,7 +150,7 @@ function GeneralCard() {
               onChange={(e) => setSelectedPeriod(e.target.value)}
               className="input-field w-auto text-sm"
             >
-              {totalRevenueData?.periods?.map((period) => (
+              {processedData?.periods?.map((period) => (
                 <option key={period.period} value={period.period}>
                   {period.period}
                 </option>
@@ -180,56 +196,39 @@ function GeneralCard() {
     </div>
   );
 
-  if (loading) {
+  if (!state.chartData) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="card">
           <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">Loading data...</div>
+            <div className="text-gray-500">No chart data available</div>
           </div>
         </div>
         <div className="card">
           <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">Loading data...</div>
+            <div className="text-gray-500">No chart data available</div>
           </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="card">
-          <div className="flex items-center justify-center h-32">
-            <div className="text-red-500">Error loading data: {error}</div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="flex items-center justify-center h-32">
-            <div className="text-red-500">Error loading data: {error}</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!state.data) {
+  if (!processedData || !processedData.periods || processedData.periods.length === 0) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="card">
           <div className="flex items-center justify-center h-32">
             <div className="text-center">
-              <div className="text-gray-500 mb-1">No data available</div>
-              <div className="text-sm text-gray-400">Upload a CSV file to get started</div>
+              <div className="text-gray-500 mb-1">No chart data available</div>
+              <div className="text-sm text-gray-400">Select pharmacies and metrics to see data</div>
             </div>
           </div>
         </div>
         <div className="card">
           <div className="flex items-center justify-center h-32">
             <div className="text-center">
-              <div className="text-gray-500 mb-1">No data available</div>
-              <div className="text-sm text-gray-400">Upload a CSV file to get started</div>
+              <div className="text-gray-500 mb-1">No chart data available</div>
+              <div className="text-sm text-gray-400">Select pharmacies and metrics to see data</div>
             </div>
           </div>
         </div>
@@ -237,31 +236,7 @@ function GeneralCard() {
     );
   }
 
-  if (!totalRevenueData || !totalRevenueData.periods || totalRevenueData.periods.length === 0) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="card">
-          <div className="flex items-center justify-center h-32">
-            <div className="text-center">
-              <div className="text-gray-500 mb-1">No periods available</div>
-              <div className="text-sm text-gray-400">Upload a CSV file to get started</div>
-            </div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="flex items-center justify-center h-32">
-            <div className="text-center">
-              <div className="text-gray-500 mb-1">No periods available</div>
-              <div className="text-sm text-gray-400">Upload a CSV file to get started</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentPeriodData = totalRevenueData.periods.find(p => p.period === selectedPeriod);
-  const selectedMetricPeriodData = selectedMetricData?.periods?.find(p => p.period === selectedPeriod);
+  const currentPeriodData = processedData.periods.find(p => p.period === selectedPeriod);
   
   if (!currentPeriodData) {
     return (
@@ -280,10 +255,8 @@ function GeneralCard() {
     );
   }
 
-  // For the left card, use the selected metric data
-  const selectedMetricValue = selectedMetricPeriodData 
-    ? formatValue(selectedMetricPeriodData.revenue, state.selectedMetric)
-    : formatValue(0, state.selectedMetric);
+  // For the left card, use the selected metric value
+  const selectedMetricValue = formatValue(currentPeriodData.selectedMetricValue, state.selectedMetric);
   
   // For the right card, always show total revenue for the current period
   const totalRevenueValue = formatCurrency(currentPeriodData.revenue);
@@ -296,8 +269,8 @@ function GeneralCard() {
           state.selectedMetric || "Selected Metric",
           selectedMetricValue,
           <BarChart3 className="h-6 w-6 text-blue-600" />,
-          selectedMetricPeriodData?.percentage_change,
-          selectedMetricPeriodData?.change_direction,
+          currentPeriodData.selectedMetricPercentageChange,
+          currentPeriodData.selectedMetricChangeDirection,
           "Click to view all periods",
           () => setShowSelectedMetricModal(true)
         )}
@@ -307,8 +280,8 @@ function GeneralCard() {
           "Total Revenue",
           totalRevenueValue,
           <DollarSign className="h-6 w-6 text-green-600" />,
-          currentPeriodData.percentage_change,
-          currentPeriodData.change_direction,
+          currentPeriodData.totalRevenuePercentageChange,
+          currentPeriodData.totalRevenueChangeDirection,
           "Click to view all periods",
           () => setShowTotalRevenueModal(true)
         )}
@@ -318,6 +291,7 @@ function GeneralCard() {
       <TotalRevenueModal 
         isOpen={showTotalRevenueModal}
         onClose={() => setShowTotalRevenueModal(false)}
+        revenueData={processedData}
       />
 
       {/* Selected Metric Modal */}
@@ -325,6 +299,7 @@ function GeneralCard() {
         isOpen={showSelectedMetricModal}
         onClose={() => setShowSelectedMetricModal(false)}
         selectedMetric={state.selectedMetric || 'Total Revenue'}
+        metricData={processedData}
       />
     </>
   );

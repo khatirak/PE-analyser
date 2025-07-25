@@ -17,10 +17,18 @@ function ClusterModal({ isOpen, onClose }) {
     setLoading(true);
     setError(null);
     try {
+      console.log('🔍 Loading clusters...');
       const data = await fetchClusters();
+      console.log('✅ Clusters loaded:', data);
+      console.log('📊 Cluster structure check:', data.map(cluster => ({
+        name: cluster.name,
+        pharmacy_count: cluster.pharmacy_count,
+        pharmacies_length: cluster.pharmacies?.length,
+        has_pharmacies: !!cluster.pharmacies
+      })));
       setClusters(data);
     } catch (error) {
-      console.error('Error loading clusters:', error);
+      console.error('❌ Error loading clusters:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -75,41 +83,60 @@ function ClusterModal({ isOpen, onClose }) {
 
           {!loading && !error && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {clusters.map((cluster, index) => (
-                <div key={index} className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {cluster.name}
-                    </h3>
-                    <span className="text-sm text-gray-500">
-                      {cluster.pharmacy_count} pharmacies
-                    </span>
+              {clusters.map((cluster, index) => {
+                // Safety check for cluster structure
+                if (!cluster || !cluster.name) {
+                  console.warn('⚠️ Invalid cluster data:', cluster);
+                  return null;
+                }
+                
+                const pharmacyCount = cluster.pharmacy_count || 0;
+                const pharmacies = cluster.pharmacies || [];
+                
+                return (
+                  <div key={index} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {cluster.name}
+                      </h3>
+                      <span className="text-sm text-gray-500">
+                        {pharmacyCount} pharmacies
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {pharmacies.map((pharmacy, pIndex) => {
+                        // Safety check for pharmacy structure
+                        if (!pharmacy || !pharmacy.name) {
+                          console.warn('⚠️ Invalid pharmacy data:', pharmacy);
+                          return null;
+                        }
+                        
+                        return (
+                          <div key={pIndex} className="flex items-center justify-between bg-white rounded-md p-3 shadow-sm">
+                            <div className="flex items-center space-x-2">
+                              {getStatusIcon(pharmacy.status)}
+                              <span className="text-sm font-medium text-gray-900">
+                                {pharmacy.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className={`text-xs font-medium ${getStatusColor(pharmacy.status)}`}>
+                                {getStatusText(pharmacy.status)}
+                              </span>
+                              {pharmacy.acquisition_date && (
+                                <span className="text-xs text-gray-500">
+                                  ({pharmacy.acquisition_date})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    {cluster.pharmacies.map((pharmacy, pIndex) => (
-                      <div key={pIndex} className="flex items-center justify-between bg-white rounded-md p-3 shadow-sm">
-                        <div className="flex items-center space-x-2">
-                          {getStatusIcon(pharmacy.status)}
-                          <span className="text-sm font-medium text-gray-900">
-                            {pharmacy.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`text-xs font-medium ${getStatusColor(pharmacy.status)}`}>
-                            {getStatusText(pharmacy.status)}
-                          </span>
-                          {pharmacy.acquisition_date && (
-                            <span className="text-xs text-gray-500">
-                              ({pharmacy.acquisition_date})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

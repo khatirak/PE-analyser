@@ -3,7 +3,7 @@ import { X, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
 import { fetchSelectedMetricData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
 
-function SelectedMetricModal({ isOpen, onClose, selectedMetric }) {
+function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: passedMetricData }) {
   const { state } = useDataContext();
   const [metricData, setMetricData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -54,9 +54,18 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric }) {
 
   useEffect(() => {
     if (isOpen && selectedMetric) {
-      loadSelectedMetricData();
+      if (passedMetricData) {
+        // Use passed data from chart
+        console.log('📊 Using passed metric data from chart:', passedMetricData);
+        setMetricData(passedMetricData);
+        setLoading(false);
+        setError(null);
+      } else {
+        // Fallback to API call if no passed data
+        loadSelectedMetricData();
+      }
     }
-  }, [isOpen, state.viewType, selectedMetric, loadSelectedMetricData]);
+  }, [isOpen, selectedMetric, passedMetricData, loadSelectedMetricData]);
 
   const formatValue = (value, metric) => {
     // Check if the metric is currency-based
@@ -139,7 +148,7 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric }) {
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Cumulative Total {selectedMetric}</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatValue(metricData.periods?.reduce((sum, p) => sum + p.revenue, 0) || 0, selectedMetric)}
+                      {formatValue(metricData.periods?.reduce((sum, p) => sum + p.selectedMetricValue, 0) || 0, selectedMetric)}
                     </p>
                   </div>
                 </div>
@@ -177,36 +186,36 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric }) {
                             {period.period}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatValue(period.revenue, selectedMetric)}
+                            {formatValue(period.selectedMetricValue, selectedMetric)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {period.percentage_change !== null ? (
+                            {period.selectedMetricPercentageChange !== null ? (
                               <span className={`font-medium ${
-                                period.change_direction === 'increase' 
+                                period.selectedMetricChangeDirection === 'increase' 
                                   ? 'text-green-600' 
                                   : 'text-red-600'
                               }`}>
-                                {period.change_direction === 'increase' ? '+' : ''}
-                                {period.percentage_change.toFixed(2)}%
+                                {period.selectedMetricChangeDirection === 'increase' ? '+' : ''}
+                                {period.selectedMetricPercentageChange.toFixed(2)}%
                               </span>
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            {period.percentage_change !== null ? (
+                            {period.selectedMetricPercentageChange !== null ? (
                               <div className={`flex items-center ${
-                                period.change_direction === 'increase' 
+                                period.selectedMetricChangeDirection === 'increase' 
                                   ? 'text-green-600' 
                                   : 'text-red-600'
                               }`}>
-                                {period.change_direction === 'increase' ? (
+                                {period.selectedMetricChangeDirection === 'increase' ? (
                                   <TrendingUp className="h-4 w-4 mr-1" />
                                 ) : (
                                   <TrendingDown className="h-4 w-4 mr-1" />
                                 )}
                                 <span className="text-sm font-medium">
-                                  {period.change_direction === 'increase' ? 'Growth' : 'Decline'}
+                                  {period.selectedMetricChangeDirection === 'increase' ? 'Growth' : 'Decline'}
                                 </span>
                               </div>
                             ) : (

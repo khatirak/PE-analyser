@@ -3,7 +3,7 @@ import { X, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { fetchTotalRevenueData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
 
-function TotalRevenueModal({ isOpen, onClose }) {
+function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) {
   const { state } = useDataContext();
   const [revenueData, setRevenueData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,16 @@ function TotalRevenueModal({ isOpen, onClose }) {
         }
       }
       
+      console.log('🔍 Loading total revenue data with params:', params);
       const data = await fetchTotalRevenueData(params);
+      console.log('✅ Total revenue data loaded:', data);
+      console.log('📊 Revenue data structure check:', {
+        hasData: !!data,
+        hasPeriods: !!data?.periods,
+        periodsLength: data?.periods?.length,
+        currentPeriod: data?.current_period,
+        samplePeriod: data?.periods?.[0]
+      });
       setRevenueData(data);
     } catch (error) {
       console.error('Error loading total revenue data:', error);
@@ -53,9 +62,18 @@ function TotalRevenueModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen) {
-      loadTotalRevenueData();
+      if (passedRevenueData) {
+        // Use passed data from chart
+        console.log('📊 Using passed revenue data from chart:', passedRevenueData);
+        setRevenueData(passedRevenueData);
+        setLoading(false);
+        setError(null);
+      } else {
+        // Fallback to API call if no passed data
+        loadTotalRevenueData();
+      }
     }
-  }, [isOpen, state.viewType, loadTotalRevenueData]);
+  }, [isOpen, passedRevenueData, loadTotalRevenueData]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-GB', {
@@ -131,7 +149,7 @@ function TotalRevenueModal({ isOpen, onClose }) {
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Cumulative Total Revenue</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(revenueData.periods?.reduce((sum, p) => sum + p.revenue, 0) || 0)}
+                      {formatCurrency(revenueData.periods?.reduce((sum, p) => sum + (p.revenue || 0), 0) || 0)}
                     </p>
                   </div>
                 </div>
@@ -163,51 +181,59 @@ function TotalRevenueModal({ isOpen, onClose }) {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {revenueData.periods?.map((period, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {period.period}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatCurrency(period.revenue)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {period.percentage_change !== null ? (
+                      {revenueData.periods?.map((period, index) => {
+                        // Safety check for period data
+                        if (!period) {
+                          console.warn('⚠️ Invalid period data:', period);
+                          return null;
+                        }
+                        
+                        return (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {period.period || 'N/A'}
+                            </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {formatCurrency(period.revenue || 0)}
+                            </td>
+                                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {period.totalRevenuePercentageChange !== null && period.totalRevenuePercentageChange !== undefined ? (
                               <span className={`font-medium ${
-                                period.change_direction === 'increase' 
-                                  ? 'text-green-600' 
+                                period.totalRevenueChangeDirection === 'increase'
+                                  ? 'text-green-600'
                                   : 'text-red-600'
                               }`}>
-                                {period.change_direction === 'increase' ? '+' : ''}
-                                {period.percentage_change.toFixed(1)}%
+                                {period.totalRevenueChangeDirection === 'increase' ? '+' : ''}
+                                {Number(period.totalRevenuePercentageChange).toFixed(1)}%
                               </span>
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {period.percentage_change !== null ? (
-                              <div className={`flex items-center ${
-                                period.change_direction === 'increase' 
-                                  ? 'text-green-600' 
-                                  : 'text-red-600'
-                              }`}>
-                                {period.change_direction === 'increase' ? (
-                                  <TrendingUp className="h-4 w-4 mr-1" />
-                                ) : (
-                                  <TrendingDown className="h-4 w-4 mr-1" />
-                                )}
-                                <span className="text-sm font-medium">
-                                  {period.change_direction === 'increase' ? 'Growth' : 'Decline'}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 text-sm">No change</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {period.totalRevenuePercentageChange !== null && period.totalRevenuePercentageChange !== undefined ? (
+                                <div className={`flex items-center ${
+                                  period.totalRevenueChangeDirection === 'increase' 
+                                    ? 'text-green-600' 
+                                    : 'text-red-600'
+                                }`}>
+                                  {period.totalRevenueChangeDirection === 'increase' ? (
+                                    <TrendingUp className="h-4 w-4 mr-1" />
+                                  ) : (
+                                    <TrendingDown className="h-4 w-4 mr-1" />
+                                  )}
+                                  <span className="text-sm font-medium">
+                                    {period.totalRevenueChangeDirection === 'increase' ? 'Growth' : 'Decline'}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-sm">No change</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      </tbody>
                   </table>
                 </div>
               </div>

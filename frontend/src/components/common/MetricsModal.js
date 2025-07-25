@@ -17,10 +17,15 @@ function MetricsModal({ isOpen, onClose }) {
     setLoading(true);
     setError(null);
     try {
+      console.log('🔍 Loading metrics...');
       const data = await fetchMetrics();
+      console.log('✅ Metrics loaded:', data);
+      console.log('📊 Metrics structure check:', data.slice(0, 5).map(metric => ({
+        name: metric.name
+      })));
       setMetrics(data);
     } catch (error) {
-      console.error('Error loading metrics:', error);
+      console.error('❌ Error loading metrics:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -62,16 +67,24 @@ function MetricsModal({ isOpen, onClose }) {
 
           {!loading && !error && (
             <div className="space-y-2">
-              {metrics.map((metric, index) => (
-                <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <BarChart3 className="h-4 w-4 text-orange-600" />
+              {metrics.map((metric, index) => {
+                // Safety check for metric structure
+                if (!metric || !metric.name) {
+                  console.warn('⚠️ Invalid metric data:', metric);
+                  return null;
+                }
+                
+                return (
+                  <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <BarChart3 className="h-4 w-4 text-orange-600" />
+                    </div>
+                    <span className="text-lg font-medium text-gray-900">
+                      {metric.name}
+                    </span>
                   </div>
-                  <span className="text-lg font-medium text-gray-900">
-                    {metric.name}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -18,10 +18,18 @@ function PharmacyModal({ isOpen, onClose }) {
     setLoading(true);
     setError(null);
     try {
+      console.log('🔍 Loading pharmacies...');
       const data = await fetchPharmacies();
+      console.log('✅ Pharmacies loaded:', data);
+      console.log('📊 Pharmacy structure check:', data.slice(0, 3).map(pharmacy => ({
+        name: pharmacy.name,
+        cluster: pharmacy.cluster,
+        status: pharmacy.status,
+        acquisition_date: pharmacy.acquisition_date
+      })));
       setPharmacies(data);
     } catch (error) {
-      console.error('Error loading pharmacies:', error);
+      console.error('❌ Error loading pharmacies:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -205,33 +213,41 @@ function PharmacyModal({ isOpen, onClose }) {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {getSortedPharmacies().map((pharmacy, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {getStatusIcon(pharmacy.status)}
-                          <span className={`ml-2 text-sm font-medium ${getStatusColor(pharmacy.status)}`}>
-                            {getStatusText(pharmacy.status)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {pharmacy.name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {pharmacy.cluster || 'N/A'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {pharmacy.acquisition_date || 'Not acquired'}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {getSortedPharmacies().map((pharmacy, index) => {
+                    // Safety check for pharmacy structure
+                    if (!pharmacy || !pharmacy.name) {
+                      console.warn('⚠️ Invalid pharmacy data:', pharmacy);
+                      return null;
+                    }
+                    
+                    return (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            {getStatusIcon(pharmacy.status)}
+                            <span className={`ml-2 text-sm font-medium ${getStatusColor(pharmacy.status)}`}>
+                              {getStatusText(pharmacy.status)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {pharmacy.name}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {pharmacy.cluster || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {pharmacy.acquisition_date || 'Not acquired'}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
