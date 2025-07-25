@@ -4,10 +4,20 @@ import { fetchTotalRevenueScoreCardData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
 
 function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) {
-  const { state } = useDataContext();
+  const { state, dispatch } = useDataContext();
   const [revenueData, setRevenueData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const handlePeriodClick = (period) => {
+    dispatch({ type: 'SET_SELECTED_TOTAL_REVENUE_PERIOD', payload: period });
+    onClose();
+  };
+
+  const handleResetToCurrent = () => {
+    dispatch({ type: 'SET_SELECTED_TOTAL_REVENUE_PERIOD', payload: null });
+    onClose();
+  };
 
   const loadTotalRevenueData = useCallback(async () => {
     setLoading(true);
@@ -152,8 +162,15 @@ function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) 
                           return null;
                         }
                         
+                        const isSelected = state.selectedTotalRevenuePeriod === period.period;
                         return (
-                          <tr key={index} className="hover:bg-gray-50">
+                          <tr 
+                            key={index} 
+                            className={`hover:bg-gray-50 cursor-pointer transition-colors ${
+                              isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                            }`}
+                            onClick={() => handlePeriodClick(period.period)}
+                          >
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {period.period || 'N/A'}
                             </td>
@@ -209,13 +226,28 @@ function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) 
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
           <div className="text-sm text-gray-600">
             Showing total revenue across all pharmacies for {getViewTypeLabel().toLowerCase()} view
+            {state.selectedTotalRevenuePeriod && (
+              <span className="ml-2 text-blue-600">
+                • Click a row to select that period
+              </span>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-          >
-            Close
-          </button>
+          <div className="flex space-x-2">
+            {state.selectedTotalRevenuePeriod && (
+              <button
+                onClick={handleResetToCurrent}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Reset to Current
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

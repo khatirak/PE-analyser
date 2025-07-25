@@ -19,7 +19,9 @@ const initialState = {
   chartData: null,
   loading: false,
   error: null,
-  pharmacySelectionMode: 'pharmacies' // 'pharmacies' or 'clusters'
+  pharmacySelectionMode: 'pharmacies', // 'pharmacies' or 'clusters'
+  selectedTotalRevenuePeriod: null, // Track selected period for Total Revenue card
+  selectedMetricPeriod: null // Track selected period for Selected Metric card
 };
 
 function dataReducer(state, action) {
@@ -52,6 +54,10 @@ function dataReducer(state, action) {
       return { ...state, chartData: action.payload };
     case 'SET_PHARMACY_SELECTION_MODE':
       return { ...state, pharmacySelectionMode: action.payload };
+    case 'SET_SELECTED_TOTAL_REVENUE_PERIOD':
+      return { ...state, selectedTotalRevenuePeriod: action.payload };
+    case 'SET_SELECTED_METRIC_PERIOD':
+      return { ...state, selectedMetricPeriod: action.payload };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
     case 'SET_ERROR':

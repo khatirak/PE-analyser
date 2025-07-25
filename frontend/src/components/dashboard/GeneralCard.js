@@ -60,46 +60,12 @@ function GeneralCard({ viewType }) {
 
   // Process selected metric data for display
   const selectedMetricCardData = useMemo(() => {
-    if (!selectedMetricData || !selectedMetricData.labels || !selectedMetricData.datasets) {
+    if (!selectedMetricData || !selectedMetricData.periods) {
       return null;
     }
 
-    const periods = selectedMetricData.labels.map((label, index) => {
-      // Calculate total value for this period (sum of all datasets)
-      const totalValue = selectedMetricData.datasets.reduce((sum, dataset) => {
-        return sum + (dataset.data[index] || 0);
-      }, 0);
-
-      // Calculate percentage change from previous period
-      let percentageChange = null;
-      let changeDirection = null;
-      
-      if (index > 0) {
-        const previousTotalValue = selectedMetricData.datasets.reduce((sum, dataset) => {
-          return sum + (dataset.data[index - 1] || 0);
-        }, 0);
-        
-        if (previousTotalValue > 0) {
-          percentageChange = ((totalValue - previousTotalValue) / previousTotalValue) * 100;
-          changeDirection = percentageChange >= 0 ? 'increase' : 'decrease';
-        }
-      }
-
-      return {
-        period: label,
-        value: totalValue,
-        percentage_change: percentageChange,
-        change_direction: changeDirection
-      };
-    });
-
-    const currentPeriod = periods.length > 0 ? periods[periods.length - 1].period : null;
-
-    return {
-      periods,
-      current_period: currentPeriod,
-      total_value: periods.reduce((sum, p) => sum + p.value, 0)
-    };
+    // The backend already provides the processed data, just use it directly
+    return selectedMetricData;
   }, [selectedMetricData]);
 
   const formatCurrency = (value) => {
@@ -229,14 +195,35 @@ function GeneralCard({ viewType }) {
     );
   }
 
-  // Get current period data for both cards
-  const currentTotalRevenueData = totalRevenueCardData?.periods?.length > 0 
-    ? totalRevenueCardData.periods[totalRevenueCardData.periods.length - 1] 
-    : null;
+  // Get the data for the selected periods (or current period if none selected)
+  const getTotalRevenueData = () => {
+    if (!totalRevenueCardData?.periods?.length) return null;
     
-  const currentSelectedMetricData = selectedMetricCardData?.periods?.length > 0 
-    ? selectedMetricCardData.periods[selectedMetricCardData.periods.length - 1] 
-    : null;
+    if (state.selectedTotalRevenuePeriod) {
+      // Find the selected period
+      return totalRevenueCardData.periods.find(p => p.period === state.selectedTotalRevenuePeriod) || 
+             totalRevenueCardData.periods[totalRevenueCardData.periods.length - 1];
+    }
+    
+    // Default to current period (last in the array)
+    return totalRevenueCardData.periods[totalRevenueCardData.periods.length - 1];
+  };
+  
+  const getSelectedMetricData = () => {
+    if (!selectedMetricCardData?.periods?.length) return null;
+    
+    if (state.selectedMetricPeriod) {
+      // Find the selected period
+      return selectedMetricCardData.periods.find(p => p.period === state.selectedMetricPeriod) || 
+             selectedMetricCardData.periods[selectedMetricCardData.periods.length - 1];
+    }
+    
+    // Default to current period (last in the array)
+    return selectedMetricCardData.periods[selectedMetricCardData.periods.length - 1];
+  };
+
+  const currentTotalRevenueData = getTotalRevenueData();
+  const currentSelectedMetricData = getSelectedMetricData();
 
   // Format values for display
   const totalRevenueValue = currentTotalRevenueData 
@@ -246,6 +233,23 @@ function GeneralCard({ viewType }) {
   const selectedMetricValue = currentSelectedMetricData 
     ? formatValue(currentSelectedMetricData.value, state.selectedMetric || 'Metric')
     : '0';
+
+  // Create subtitles showing the selected period
+  const getTotalRevenueSubtitle = () => {
+    if (currentTotalRevenueData) {
+      const period = state.selectedTotalRevenuePeriod || currentTotalRevenueData.period;
+      return `Click to view all periods (${period})`;
+    }
+    return 'Click to view all periods';
+  };
+
+  const getSelectedMetricSubtitle = () => {
+    if (currentSelectedMetricData) {
+      const period = state.selectedMetricPeriod || currentSelectedMetricData.period;
+      return `Click to view all periods (${period})`;
+    }
+    return 'Click to view all periods';
+  };
 
   return (
     <>
@@ -257,7 +261,7 @@ function GeneralCard({ viewType }) {
           <BarChart3 className="h-6 w-6 text-blue-600" />,
           currentSelectedMetricData?.percentage_change,
           currentSelectedMetricData?.change_direction,
-          "Click to view all periods",
+          getSelectedMetricSubtitle(),
           () => setShowSelectedMetricModal(true),
           loading
         )}
@@ -269,7 +273,7 @@ function GeneralCard({ viewType }) {
           <DollarSign className="h-6 w-6 text-green-600" />,
           currentTotalRevenueData?.percentage_change,
           currentTotalRevenueData?.change_direction,
-          "Click to view all periods",
+          getTotalRevenueSubtitle(),
           () => setShowTotalRevenueModal(true),
           loading
         )}

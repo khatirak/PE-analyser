@@ -4,10 +4,20 @@ import { fetchSelectedMetricScoreCardData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
 
 function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: passedMetricData }) {
-  const { state } = useDataContext();
+  const { state, dispatch } = useDataContext();
   const [metricData, setMetricData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const handlePeriodClick = (period) => {
+    dispatch({ type: 'SET_SELECTED_METRIC_PERIOD', payload: period });
+    onClose();
+  };
+
+  const handleResetToCurrent = () => {
+    dispatch({ type: 'SET_SELECTED_METRIC_PERIOD', payload: null });
+    onClose();
+  };
 
   const loadSelectedMetricData = useCallback(async () => {
     setLoading(true);
@@ -151,11 +161,19 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: pass
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {metricData.periods?.map((period, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {period.period}
-                          </td>
+                      {metricData.periods?.map((period, index) => {
+                        const isSelected = state.selectedMetricPeriod === period.period;
+                        return (
+                          <tr 
+                            key={index} 
+                            className={`hover:bg-gray-50 cursor-pointer transition-colors ${
+                              isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                            }`}
+                            onClick={() => handlePeriodClick(period.period)}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {period.period}
+                            </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {formatValue(period.value, selectedMetric)}
                           </td>
@@ -194,7 +212,8 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: pass
                             )}
                           </td>
                         </tr>
-                      ))}
+                      );
+                    })}
                     </tbody>
                   </table>
                 </div>
@@ -207,13 +226,28 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: pass
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
           <div className="text-sm text-gray-600">
             Showing {selectedMetric} across all pharmacies for {getViewTypeLabel().toLowerCase()} view
+            {state.selectedMetricPeriod && (
+              <span className="ml-2 text-blue-600">
+                • Click a row to select that period
+              </span>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-          >
-            Close
-          </button>
+          <div className="flex space-x-2">
+            {state.selectedMetricPeriod && (
+              <button
+                onClick={handleResetToCurrent}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Reset to Current
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
