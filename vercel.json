@@ -35,6 +35,10 @@
       "dest": "backend-js/server.js"
     },
     {
+      "src": "/scorecard",
+      "dest": "backend-js/server.js"
+    },
+    {
       "src": "/revenue",
       "dest": "backend-js/server.js"
     },
