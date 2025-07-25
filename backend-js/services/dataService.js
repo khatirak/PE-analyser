@@ -153,12 +153,13 @@ class DataService {
     return revenueData;
   }
   
-  getChartData(pharmacies = null, metric = null, acquisitionDate = null, dateRangeStart = null, dateRangeEnd = null) {
+  getChartData(pharmacies = null, metric = null, acquisitionDate = null, dateRangeStart = null, dateRangeEnd = null, viewType = 'month', quarterRangeStart = null, quarterRangeEnd = null, fiscalYearRangeStart = null, fiscalYearRangeEnd = null) {
     if (!this.currentData) return null;
     
     let chartData = [...this.currentData];
     
     console.log('🔍 getChartData - Initial data length:', chartData.length);
+    console.log('🔍 getChartData - View type:', viewType);
     
     // Filter by selected pharmacies
     if (pharmacies && pharmacies.length > 0) {
@@ -178,14 +179,29 @@ class DataService {
       console.log('🔍 After acquisition date filter:', chartData.length, 'rows');
     }
     
-    // Apply date range filter
-    if (dateRangeStart || dateRangeEnd) {
-      chartData = this._applyDateRangeFilter(chartData, dateRangeStart, dateRangeEnd);
-      console.log('🔍 After date range filter:', chartData.length, 'rows');
+    // Apply range filters based on view type
+    if (viewType === 'month') {
+      // Apply date range filter for monthly view
+      if (dateRangeStart || dateRangeEnd) {
+        chartData = this._applyDateRangeFilter(chartData, dateRangeStart, dateRangeEnd);
+        console.log('🔍 After date range filter:', chartData.length, 'rows');
+      }
+    } else if (viewType === 'quarter') {
+      // Apply quarter range filter for quarterly view
+      if (quarterRangeStart || quarterRangeEnd) {
+        chartData = this._applyQuarterRangeFilter(chartData, quarterRangeStart, quarterRangeEnd);
+        console.log('🔍 After quarter range filter:', chartData.length, 'rows');
+      }
+    } else if (viewType === 'fiscal_year') {
+      // Apply fiscal year range filter for fiscal year view
+      if (fiscalYearRangeStart || fiscalYearRangeEnd) {
+        chartData = this._applyFiscalYearRangeFilter(chartData, fiscalYearRangeStart, fiscalYearRangeEnd);
+        console.log('🔍 After fiscal year range filter:', chartData.length, 'rows');
+      }
     }
     
-    // Transform data into chart format
-    return this._transformToChartFormat(chartData, pharmacies);
+    // Transform data into chart format based on view type
+    return this._transformToChartFormat(chartData, pharmacies, viewType);
   }
   
   _applyAcquisitionFilter(revenueData, acquisitionDates) {
@@ -216,8 +232,8 @@ class DataService {
     });
   }
   
-  _transformToChartFormat(data, pharmacies) {
-    console.log('🔍 Transforming chart data:', { dataLength: data?.length, pharmacies });
+  _transformToChartFormat(data, pharmacies, viewType = 'month') {
+    console.log('🔍 Transforming chart data:', { dataLength: data?.length, pharmacies, viewType });
     
     if (!data || data.length === 0) {
       console.log('❌ No data to transform');
@@ -227,48 +243,87 @@ class DataService {
     // Log first few rows to see structure
     console.log('📊 Sample data rows:', data.slice(0, 3));
     
-    // Group data by date and pharmacy
+    // Group data by period and pharmacy based on view type
     const groupedData = {};
     const pharmacySet = new Set();
     
     data.forEach(row => {
-      const date = row.Date;
+      let periodKey;
+      
+      if (viewType === 'month') {
+        periodKey = row.Date; // Use Date column for monthly view
+      } else if (viewType === 'quarter') {
+        // Combine Quarter and Fiscal_Year for quarterly view
+        const quarter = row.Quarter;
+        const fiscalYear = row.Fiscal_Year;
+        periodKey = `${fiscalYear} ${quarter}`; // Format: "2025 Q1"
+      } else if (viewType === 'fiscal_year') {
+        periodKey = row.Fiscal_Year; // Use Fiscal_Year column for fiscal year view
+      } else {
+        periodKey = row.Date; // Default to monthly
+      }
+      
       const pharmacy = row.Pharmacy;
       const value = parseFloat(row.Value) || 0;
       
       pharmacySet.add(pharmacy);
       
-      if (!groupedData[date]) {
-        groupedData[date] = {};
+      if (!groupedData[periodKey]) {
+        groupedData[periodKey] = {};
       }
       
-      if (!groupedData[date][pharmacy]) {
-        groupedData[date][pharmacy] = 0;
+      if (!groupedData[periodKey][pharmacy]) {
+        groupedData[periodKey][pharmacy] = 0;
       }
       
-      groupedData[date][pharmacy] += value;
+      groupedData[periodKey][pharmacy] += value;
     });
     
-    // Get sorted dates - convert to proper date objects for chronological sorting
-    const dateLabels = Object.keys(groupedData);
-    const labels = dateLabels.sort((a, b) => {
-      // Convert date strings like "Apr-24" to Date objects for proper sorting
-      const dateA = this._parseChartDate(a);
-      const dateB = this._parseChartDate(b);
-      return dateA - dateB;
+    // Get sorted period labels based on view type
+    const periodLabels = Object.keys(groupedData);
+    const labels = periodLabels.sort((a, b) => {
+      if (viewType === 'month') {
+        // Convert date strings like "Apr-24" to Date objects for proper sorting
+        const dateA = this._parseChartDate(a);
+        const dateB = this._parseChartDate(b);
+        return dateA - dateB;
+      } else if (viewType === 'quarter') {
+        // Sort quarters chronologically (e.g., "2025 Q1", "2025 Q2")
+        return this._parseQuarter(a) - this._parseQuarter(b);
+      } else if (viewType === 'fiscal_year') {
+        // Sort fiscal years numerically
+        return parseInt(a) - parseInt(b);
+      }
+      return a.localeCompare(b);
+    });
+
+    // Format labels for display
+    const formattedLabels = labels.map(label => {
+      if (viewType === 'quarter') {
+        // Convert "2025 Q1" to "Q1 2025" format (removed FY)
+        const parts = label.split(' ');
+        if (parts.length === 2) {
+          const year = parts[0];
+          const quarter = parts[1];
+          return `${quarter} ${year}`;
+        }
+        return label;
+      }
+      return label;
     });
     
     // Create datasets for each pharmacy
     const datasets = Array.from(pharmacySet).map(pharmacy => ({
       label: pharmacy,
-      data: labels.map(date => groupedData[date][pharmacy] || 0)
+      data: labels.map(period => groupedData[period][pharmacy] || 0)
     }));
     
-    const result = { labels, datasets };
+    const result = { labels: formattedLabels, datasets };
     console.log('✅ Transformed chart data:', { 
-      labelsCount: labels.length, 
+      viewType,
+      labelsCount: formattedLabels.length, 
       datasetsCount: datasets.length,
-      sampleLabels: labels.slice(0, 5),
+      sampleLabels: formattedLabels.slice(0, 5),
       sampleDatasets: datasets.slice(0, 2)
     });
     
@@ -329,6 +384,82 @@ class DataService {
         return false;
       }
       
+      return true;
+    });
+  }
+
+  _parseQuarter(quarterStr) {
+    // Parse quarter strings like "2025 Q1", "2026 Q2", etc.
+    // Handle the format we're using internally
+    let quarter, year;
+    
+    // Try format "2025 Q1" (our internal format)
+    const spaceParts = quarterStr.split(' ');
+    if (spaceParts.length === 2) {
+      year = parseInt(spaceParts[0]);
+      quarter = parseInt(spaceParts[1].charAt(1));
+    } else {
+      // Try format "Q1 2024" (alternative format)
+      const quarterMatch = quarterStr.match(/Q(\d)/);
+      const yearMatch = quarterStr.match(/(\d{4})/);
+      
+      if (quarterMatch && yearMatch) {
+        quarter = parseInt(quarterMatch[1]);
+        year = parseInt(yearMatch[1]);
+      } else {
+        console.warn('Invalid quarter format:', quarterStr);
+        return 0; // Return 0 for invalid formats
+      }
+    }
+    
+    if (isNaN(quarter) || isNaN(year)) {
+      console.warn('Invalid quarter or year in:', quarterStr);
+      return 0;
+    }
+    
+    // Map to a chronological order: Q1 2025 = 5, Q2 2025 = 6, Q1 2026 = 9, etc.
+    return quarter + (year - 2000) * 4;
+  }
+
+  _applyQuarterRangeFilter(data, startQuarter, endQuarter) {
+    if (!startQuarter && !endQuarter) return data;
+
+    console.log('🔍 Applying quarter range filter:', { startQuarter, endQuarter });
+
+    return data.filter(row => {
+      // Create combined quarter key from Quarter and Fiscal_Year columns
+      const quarter = row.Quarter;
+      const fiscalYear = row.Fiscal_Year;
+      const combinedQuarter = `${fiscalYear} ${quarter}`; // Format: "2025 Q1"
+
+      if (startQuarter && this._parseQuarter(combinedQuarter) < this._parseQuarter(startQuarter)) {
+        return false;
+      }
+      
+      if (endQuarter && this._parseQuarter(combinedQuarter) > this._parseQuarter(endQuarter)) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  _applyFiscalYearRangeFilter(data, startFiscalYear, endFiscalYear) {
+    if (!startFiscalYear && !endFiscalYear) return data;
+
+    console.log('🔍 Applying fiscal year range filter:', { startFiscalYear, endFiscalYear });
+
+    return data.filter(row => {
+      const fiscalYear = parseInt(row.Fiscal_Year);
+
+      if (startFiscalYear && fiscalYear < parseInt(startFiscalYear)) {
+        return false;
+      }
+      
+      if (endFiscalYear && fiscalYear > parseInt(endFiscalYear)) {
+        return false;
+      }
+
       return true;
     });
   }

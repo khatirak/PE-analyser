@@ -153,7 +153,7 @@ function PharmacySelector() {
 
       {/* Acquisition Month Selector */}
       <div className="space-y-2">
-        <label className="text-sm text-gray-700">Include data from month onwards:</label>
+        <label className="text-sm text-gray-700">Include data from selected month and prior:</label>
         <select
           value={state.acquisitionDate || ''}
           onChange={(e) => {
