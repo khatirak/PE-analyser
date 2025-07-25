@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { X, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { fetchTotalRevenueData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
@@ -9,13 +9,7 @@ function TotalRevenueModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadTotalRevenueData();
-    }
-  }, [isOpen, state.viewType]);
-
-  const loadTotalRevenueData = async () => {
+  const loadTotalRevenueData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -55,7 +49,13 @@ function TotalRevenueModal({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [state.viewType, state.dateRange, state.quarterRange, state.fiscalYearRange]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadTotalRevenueData();
+    }
+  }, [isOpen, state.viewType, loadTotalRevenueData]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-GB', {

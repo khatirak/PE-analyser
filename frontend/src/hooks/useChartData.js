@@ -96,7 +96,7 @@ export const useChartData = () => {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [chartParams, loadChartData]);
+  }, [chartParams, loadChartData, dispatch]);
 
   return {
     chartData: state.chartData,

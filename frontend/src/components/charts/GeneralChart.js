@@ -9,10 +9,10 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { ChevronDown, Calendar, BarChart3, Eye, EyeOff } from 'lucide-react';
+import { ChevronDown, BarChart3, Eye, EyeOff } from 'lucide-react';
 import { useDataContext } from '../../context/DataContext';
 import { useChartData } from '../../hooks/useChartData';
-import RangeSelector from '../filters/RangeSelector';
+
 
 function GeneralChart() {
   const { state, dispatch } = useDataContext();
@@ -22,7 +22,7 @@ function GeneralChart() {
   const [showMetricDropdown, setShowMetricDropdown] = useState(false);
   const [showTotalLine, setShowTotalLine] = useState(false);
   const [showCombinedTotal, setShowCombinedTotal] = useState(false);
-  const [currentDate] = useState(new Date());
+
   const dropdownRef = useRef(null);
 
   // Set default metric if none selected and metrics are available

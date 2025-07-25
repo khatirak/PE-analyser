@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useDataContext } from '../../context/DataContext';
 
 function RangeSelector() {
@@ -7,7 +7,7 @@ function RangeSelector() {
   console.log('RangeSelector mounted, current state:', state.dateRange);
 
   // Define setDefaultRanges function
-  const setDefaultRanges = () => {
+  const setDefaultRanges = useCallback(() => {
     console.log('Setting default ranges...');
     const currentDate = new Date();
     const startDate = new Date('2024-04-01'); // Apr-24
@@ -62,12 +62,12 @@ function RangeSelector() {
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
       dispatch({ type: 'SET_FISCAL_YEAR_RANGE', payload: { start: startFY, end: currentFY.toString() } });
     }
-  };
+  }, [state.dateRange, state.quarterRange, state.fiscalYearRange, dispatch]);
 
   // Set default ranges when component mounts
   useEffect(() => {
     setDefaultRanges();
-  }, []); // Run only on mount
+  }, [setDefaultRanges]); // Run only on mount
 
   // Also set default ranges when view type changes
   useEffect(() => {
@@ -75,7 +75,7 @@ function RangeSelector() {
       console.log('View type changed, setting default ranges for:', state.viewType);
       setDefaultRanges();
     }
-  }, [state.viewType]);
+  }, [state.viewType, setDefaultRanges]);
 
   const handleDateRangeChange = (field, value) => {
     console.log('RangeSelector - Date range change:', field, value);

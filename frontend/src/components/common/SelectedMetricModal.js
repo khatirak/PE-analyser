@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { X, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
 import { fetchSelectedMetricData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
@@ -9,13 +9,7 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (isOpen && selectedMetric) {
-      loadSelectedMetricData();
-    }
-  }, [isOpen, state.viewType, selectedMetric]);
-
-  const loadSelectedMetricData = async () => {
+  const loadSelectedMetricData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -56,7 +50,13 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedMetric, state.viewType, state.dateRange, state.quarterRange, state.fiscalYearRange]);
+
+  useEffect(() => {
+    if (isOpen && selectedMetric) {
+      loadSelectedMetricData();
+    }
+  }, [isOpen, state.viewType, selectedMetric, loadSelectedMetricData]);
 
   const formatValue = (value, metric) => {
     // Check if the metric is currency-based

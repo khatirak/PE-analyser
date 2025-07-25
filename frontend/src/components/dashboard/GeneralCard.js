@@ -7,7 +7,7 @@ import SelectedMetricModal from '../common/SelectedMetricModal';
 
 function GeneralCard() {
   const { state } = useDataContext();
-  const [revenueData, setRevenueData] = useState(null);
+
   const [totalRevenueData, setTotalRevenueData] = useState(null);
   const [selectedMetricData, setSelectedMetricData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -67,7 +67,7 @@ function GeneralCard() {
         console.log('Received total revenue data:', totalRevenueResult);
         console.log('Received selected metric data:', selectedMetricResult);
         
-        setRevenueData(revenueResult);
+
         setTotalRevenueData(totalRevenueResult);
         setSelectedMetricData(selectedMetricResult);
         
