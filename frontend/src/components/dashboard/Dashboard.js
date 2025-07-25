@@ -44,7 +44,7 @@ function Dashboard() {
         </div>
 
         <div className="mb-8">
-          <GeneralCard />
+          <GeneralCard viewType={state.viewType} />
         </div>
         
         <div className="chart-container">

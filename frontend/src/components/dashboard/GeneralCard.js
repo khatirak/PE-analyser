@@ -4,10 +4,9 @@ import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react';
 import TotalRevenueModal from '../common/TotalRevenueModal';
 import SelectedMetricModal from '../common/SelectedMetricModal';
 
-function GeneralCard() {
+function GeneralCard({ viewType }) {
   const { state } = useDataContext();
 
-  const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [showTotalRevenueModal, setShowTotalRevenueModal] = useState(false);
   const [showSelectedMetricModal, setShowSelectedMetricModal] = useState(false);
 
@@ -118,18 +117,6 @@ function GeneralCard() {
     };
   }, [state.chartData, state.selectedMetric]);
 
-  // Set default selected period when data changes
-  useEffect(() => {
-    if (processedData && processedData.current_period) {
-      // Always set to current period when data changes, or if selected period doesn't exist in new data
-      const periodExists = processedData.periods.some(p => p.period === selectedPeriod);
-      if (!selectedPeriod || !periodExists) {
-        console.log('🔄 Setting selected period to:', processedData.current_period);
-        setSelectedPeriod(processedData.current_period);
-      }
-    }
-  }, [processedData, selectedPeriod]);
-
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
@@ -151,7 +138,7 @@ function GeneralCard() {
   };
 
   const getViewTypeLabel = () => {
-    switch (state.viewType) {
+    switch (viewType) {
       case 'month':
         return 'Month';
       case 'quarter':
@@ -170,22 +157,6 @@ function GeneralCard() {
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        {!onClick && (
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Select {getViewTypeLabel()}:</label>
-            <select
-              value={selectedPeriod || ''}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="input-field w-auto text-sm"
-            >
-              {processedData?.periods?.map((period) => (
-                <option key={period.period} value={period.period}>
-                  {period.period}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       <div className="flex items-center justify-between">
@@ -264,78 +235,21 @@ function GeneralCard() {
     );
   }
 
-  // Debug period selection
-  console.log('🔍 Period selection debug:', {
-    selectedPeriod,
-    availablePeriods: processedData.periods.map(p => p.period),
-    currentPeriod: processedData.current_period,
-    periodsLength: processedData.periods.length
-  });
-
-  const currentPeriodData = processedData.periods.find(p => p.period === selectedPeriod);
+  // Use the current period data (latest period)
+  const currentPeriodData = processedData.periods[processedData.periods.length - 1];
   
   if (!currentPeriodData) {
-    console.log('❌ No data found for selected period:', selectedPeriod);
-    console.log('📊 Available periods:', processedData.periods.map(p => p.period));
-    
-    // Try to use the current period as fallback
-    const fallbackPeriodData = processedData.periods.find(p => p.period === processedData.current_period);
-    if (fallbackPeriodData) {
-      console.log('✅ Using fallback period:', processedData.current_period);
-      return (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Left Card - Selected Metric (Clickable) */}
-            {renderCard(
-              state.selectedMetric || "Selected Metric",
-              formatValue(fallbackPeriodData.selectedMetricValue, state.selectedMetric),
-              <BarChart3 className="h-6 w-6 text-blue-600" />,
-              fallbackPeriodData.percentage_change,
-              fallbackPeriodData.change_direction,
-              "Click to view all periods",
-              () => setShowSelectedMetricModal(true)
-            )}
-            
-            {/* Right Card - Total Revenue (Clickable) */}
-            {renderCard(
-              "Total Revenue",
-              formatCurrency(fallbackPeriodData.revenue),
-              <DollarSign className="h-6 w-6 text-green-600" />,
-              fallbackPeriodData.percentage_change,
-              fallbackPeriodData.change_direction,
-              "Click to view all periods",
-              () => setShowTotalRevenueModal(true)
-            )}
-          </div>
-
-          {/* Total Revenue Modal */}
-          <TotalRevenueModal 
-            isOpen={showTotalRevenueModal}
-            onClose={() => setShowTotalRevenueModal(false)}
-            revenueData={processedData}
-          />
-
-          {/* Selected Metric Modal */}
-          <SelectedMetricModal 
-            isOpen={showSelectedMetricModal}
-            onClose={() => setShowSelectedMetricModal(false)}
-            selectedMetric={state.selectedMetric || 'Total Revenue'}
-            metricData={processedData}
-          />
-        </>
-      );
-    }
-    
+    console.log('❌ No current period data found');
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="card">
           <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">No data for selected period</div>
+            <div className="text-gray-500">No data available</div>
           </div>
         </div>
         <div className="card">
           <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">No data for selected period</div>
+            <div className="text-gray-500">No data available</div>
           </div>
         </div>
       </div>
@@ -353,16 +267,14 @@ function GeneralCard() {
   let selectedMetricChangeDirection = null;
   
   if (processedData.periods.length > 1) {
-    const currentIndex = processedData.periods.findIndex(p => p.period === selectedPeriod);
-    if (currentIndex > 0) {
-      const previousPeriod = processedData.periods[currentIndex - 1];
-      const currentValue = currentPeriodData.selectedMetricValue;
-      const previousValue = previousPeriod.selectedMetricValue;
-      
-      if (previousValue > 0) {
-        selectedMetricPercentageChange = ((currentValue - previousValue) / previousValue) * 100;
-        selectedMetricChangeDirection = selectedMetricPercentageChange >= 0 ? 'increase' : 'decrease';
-      }
+    const currentIndex = processedData.periods.length - 1;
+    const previousPeriod = processedData.periods[currentIndex - 1];
+    const currentValue = currentPeriodData.selectedMetricValue;
+    const previousValue = previousPeriod.selectedMetricValue;
+    
+    if (previousValue > 0) {
+      selectedMetricPercentageChange = ((currentValue - previousValue) / previousValue) * 100;
+      selectedMetricChangeDirection = selectedMetricPercentageChange >= 0 ? 'increase' : 'decrease';
     }
   }
 
