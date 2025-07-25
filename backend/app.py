@@ -10,7 +10,7 @@ from api.routes.chart import chart_bp
 from utils.file_utils import ensure_upload_directory
 from services.data_service import data_service
 import os
-
+# dont want
 def create_app():
     """Create and configure the Flask application"""
     app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
