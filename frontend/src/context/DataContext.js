@@ -68,17 +68,12 @@ export function DataProvider({ children }) {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        console.log('Starting to load initial data...');
         dispatch({ type: 'SET_LOADING', payload: true });
         dispatch({ type: 'SET_ERROR', payload: null });
         
         // Wait a moment for backend to be fully ready
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Test with fetch first
-        console.log('Testing with fetch...');
-        console.log('Environment:', process.env.NODE_ENV);
-        console.log('API Base URL:', process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'relative' : 'http://localhost:5001'));
         try {
           const fetchWorks = await testFetchConnection();
           if (!fetchWorks) {
@@ -91,29 +86,22 @@ export function DataProvider({ children }) {
         }
         
         // Load stats directly without connection test
-        console.log('Loading stats...');
         const stats = await fetchStats();
-        console.log('Stats loaded:', stats);
         dispatch({ type: 'SET_STATS', payload: stats });
         
         // Load pharmacies
-        console.log('Loading pharmacies...');
         let pharmacies = null;
         try {
           pharmacies = await fetchPharmacies();
-          console.log('Pharmacies loaded:', pharmacies);
           dispatch({ type: 'SET_PHARMACIES', payload: pharmacies });
         } catch (error) {
           console.error('❌ Error loading pharmacies:', error);
           throw error;
         }
-        
-        // Load clusters
-        console.log('Loading clusters...');
+
         let clusters = null;
         try {
           clusters = await fetchClusters();
-          console.log('Clusters loaded:', clusters);
           dispatch({ type: 'SET_CLUSTERS', payload: clusters });
         } catch (error) {
           console.error('❌ Error loading clusters:', error);
@@ -121,38 +109,22 @@ export function DataProvider({ children }) {
         }
         
         // Load metrics
-        console.log('Loading metrics...');
         let metrics = null;
         try {
           metrics = await fetchMetrics();
-          console.log('Metrics loaded:', metrics);
           dispatch({ type: 'SET_METRICS', payload: metrics });
         } catch (error) {
           console.error('❌ Error loading metrics:', error);
           throw error;
         }
-        
-        // Auto-select all pharmacies initially
-        console.log('🔍 Auto-selecting pharmacies:', { 
-          pharmacies: pharmacies, 
-          isArray: Array.isArray(pharmacies),
-          length: pharmacies?.length,
-          samplePharmacy: pharmacies?.[0]
-        });
-        
+
         if (pharmacies && Array.isArray(pharmacies) && pharmacies.length > 0) {
           const pharmacyNames = pharmacies.map(p => p.name);
-          console.log('✅ Auto-selecting pharmacy names:', pharmacyNames.slice(0, 5), '... (total:', pharmacyNames.length, ')');
           dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: pharmacyNames });
-        } else {
-          console.log('❌ No pharmacies to auto-select - pharmacies:', pharmacies);
         }
         
         // Set data flag to indicate data is available
         dispatch({ type: 'SET_DATA', payload: { loaded: true } });
-        
-        console.log('✅ Initial data loading completed successfully');
-        console.log('🔍 Final state check - pharmacies loaded:', pharmacies?.length, 'clusters loaded:', clusters?.length, 'metrics loaded:', metrics?.length);
         
       } catch (error) {
         console.error('Error loading initial data:', error);
@@ -167,12 +139,7 @@ export function DataProvider({ children }) {
   }, []);
 
   // Monitor selectedPharmacies changes
-  useEffect(() => {
-    console.log('🔍 DataContext - selectedPharmacies changed:', {
-      count: state.selectedPharmacies.length,
-      pharmacies: state.selectedPharmacies.slice(0, 5)
-    });
-  }, [state.selectedPharmacies]);
+  useEffect(() => {}, [state.selectedPharmacies]);
 
   return (
     <DataContext.Provider value={{ state, dispatch }}>

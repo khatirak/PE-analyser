@@ -33,7 +33,6 @@ class DataService {
         })
         .on('end', () => {
           try {
-            console.log(`✅ Parsed ${results.length} rows successfully`);
             
             // Validate columns
             const validation = validateCsvColumns(results);
@@ -158,25 +157,19 @@ class DataService {
     
     let chartData = [...this.currentData];
     
-    console.log('🔍 getChartData - Initial data length:', chartData.length);
-    console.log('🔍 getChartData - View type:', viewType);
-    
     // Filter by selected pharmacies
     if (pharmacies && pharmacies.length > 0) {
       chartData = chartData.filter(row => pharmacies.includes(row.Pharmacy));
-      console.log('🔍 After pharmacy filter:', chartData.length, 'rows');
     }
     
     // Filter by metric if specified
     if (metric) {
       chartData = chartData.filter(row => row.Metric === metric);
-      console.log('🔍 After metric filter:', chartData.length, 'rows');
     }
     
     // Apply custom acquisition date filter
     if (acquisitionDate) {
       chartData = this._applyCustomAcquisitionFilter(chartData, acquisitionDate);
-      console.log('🔍 After acquisition date filter:', chartData.length, 'rows');
     }
     
     // Apply range filters based on view type
@@ -184,19 +177,16 @@ class DataService {
       // Apply date range filter for monthly view
       if (dateRangeStart || dateRangeEnd) {
         chartData = this._applyDateRangeFilter(chartData, dateRangeStart, dateRangeEnd);
-        console.log('🔍 After date range filter:', chartData.length, 'rows');
       }
     } else if (viewType === 'quarter') {
       // Apply quarter range filter for quarterly view
       if (quarterRangeStart || quarterRangeEnd) {
         chartData = this._applyQuarterRangeFilter(chartData, quarterRangeStart, quarterRangeEnd);
-        console.log('🔍 After quarter range filter:', chartData.length, 'rows');
       }
     } else if (viewType === 'fiscal_year') {
       // Apply fiscal year range filter for fiscal year view
       if (fiscalYearRangeStart || fiscalYearRangeEnd) {
         chartData = this._applyFiscalYearRangeFilter(chartData, fiscalYearRangeStart, fiscalYearRangeEnd);
-        console.log('🔍 After fiscal year range filter:', chartData.length, 'rows');
       }
     }
     
@@ -206,10 +196,7 @@ class DataService {
 
   getScoreCardData(viewType = 'month') {
     if (!this.currentData) return null;
-    
-    console.log('🔍 getScoreCardData - View type:', viewType);
-    console.log('🔍 getScoreCardData - Initial data length:', this.currentData.length);
-    
+  
     // Use all data without any filters except view type
     const chartData = [...this.currentData];
     
@@ -220,27 +207,17 @@ class DataService {
   getTotalRevenueScoreCardData(viewType = 'month') {
     if (!this.currentData) return null;
     
-    console.log('🔍 getTotalRevenueScoreCardData - View type:', viewType);
-    
     // For total revenue, we want ALL data (all metrics across all pharmacies)
     // This represents the total revenue across all pharmacies and all metrics
     const allData = [...this.currentData];
-    
-    console.log('🔍 Total revenue data length (all data):', allData.length);
-    
     // Transform all data into total revenue format (sum everything together)
     return this._transformToTotalRevenueFormat(allData, viewType);
   }
 
   getSelectedMetricScoreCardData(metric, viewType = 'month') {
     if (!this.currentData) return null;
-    
-    console.log('🔍 getSelectedMetricScoreCardData - Metric:', metric, 'View type:', viewType);
-    
     // Filter data to only include the selected metric
     const metricData = this.currentData.filter(row => row.Metric === metric);
-    
-    console.log('🔍 Metric data length:', metricData.length);
     
     // Transform metric data into total format (sum everything together)
     return this._transformToTotalRevenueFormat(metricData, viewType);
@@ -275,15 +252,10 @@ class DataService {
   }
   
   _transformToTotalRevenueFormat(data, viewType = 'month') {
-    console.log('🔍 Transforming total revenue data:', { dataLength: data?.length, viewType });
     
     if (!data || data.length === 0) {
-      console.log('❌ No data to transform');
       return { labels: [], datasets: [] };
     }
-    
-    // Log first few rows to see structure
-    console.log('📊 Sample data rows:', data.slice(0, 3));
     
     // Group data by period and sum ALL values for each period
     const groupedData = {};
@@ -353,27 +325,15 @@ class DataService {
     }];
     
     const result = { labels: formattedLabels, datasets };
-    console.log('✅ Transformed total revenue data:', { 
-      viewType,
-      labelsCount: formattedLabels.length, 
-      datasetsCount: datasets.length,
-      sampleLabels: formattedLabels.slice(0, 5),
-      sampleData: datasets[0].data.slice(0, 5)
-    });
     
     return result;
   }
 
   _transformToChartFormat(data, pharmacies, viewType = 'month') {
-    console.log('🔍 Transforming chart data:', { dataLength: data?.length, pharmacies, viewType });
     
     if (!data || data.length === 0) {
-      console.log('❌ No data to transform');
       return { labels: [], datasets: [] };
     }
-    
-    // Log first few rows to see structure
-    console.log('📊 Sample data rows:', data.slice(0, 3));
     
     // Group data by period and pharmacy based on view type
     const groupedData = {};
@@ -451,13 +411,6 @@ class DataService {
     }));
     
     const result = { labels: formattedLabels, datasets };
-    console.log('✅ Transformed chart data:', { 
-      viewType,
-      labelsCount: formattedLabels.length, 
-      datasetsCount: datasets.length,
-      sampleLabels: formattedLabels.slice(0, 5),
-      sampleDatasets: datasets.slice(0, 2)
-    });
     
     return result;
   }

@@ -17,15 +17,8 @@ function ClusterModal({ isOpen, onClose }) {
     setLoading(true);
     setError(null);
     try {
-      console.log('🔍 Loading clusters...');
       const data = await fetchClusters();
-      console.log('✅ Clusters loaded:', data);
-      console.log('📊 Cluster structure check:', data.map(cluster => ({
-        name: cluster.name,
-        pharmacy_count: cluster.pharmacy_count,
-        pharmacies_length: cluster.pharmacies?.length,
-        has_pharmacies: !!cluster.pharmacies
-      })));
+      
       setClusters(data);
     } catch (error) {
       console.error('❌ Error loading clusters:', error);

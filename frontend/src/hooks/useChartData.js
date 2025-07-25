@@ -9,12 +9,8 @@ export const useChartData = () => {
 
   // Memoize the parameters to prevent unnecessary API calls
   const chartParams = useMemo(() => {
-    console.log('🔍 useChartData - selectedPharmacies:', state.selectedPharmacies);
-    console.log('🔍 useChartData - stats available:', !!state.stats);
-    console.log('🔍 useChartData - pharmacies available:', state.pharmacies?.length);
     
     if (state.selectedPharmacies.length === 0) {
-      console.log('❌ No pharmacies selected, skipping chart data fetch');
       return null;
     }
 
@@ -49,8 +45,6 @@ export const useChartData = () => {
       }
     }
 
-    console.log('Chart params updated:', params);
-    console.log('Date range state:', state.dateRange);
     return params;
   }, [
     state.selectedPharmacies, 
@@ -65,11 +59,10 @@ export const useChartData = () => {
   ]);
 
   const loadChartData = useCallback(async (params) => {
-    console.log('useChartData - Loading chart data with params:', params);
     setLoading(true);
     try {
       const data = await fetchChartData(params);
-      console.log('useChartData - Received chart data:', data);
+      
       dispatch({ type: 'SET_CHART_DATA', payload: data });
     } catch (error) {
       console.error('Error loading chart data:', error);

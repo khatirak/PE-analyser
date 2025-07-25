@@ -28,7 +28,6 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: pass
     if (isOpen && selectedMetric) {
       if (passedMetricData) {
         // Use passed data from chart
-        console.log('📊 Using passed metric data from chart:', passedMetricData);
         setMetricData(passedMetricData);
         setLoading(false);
         setError(null);

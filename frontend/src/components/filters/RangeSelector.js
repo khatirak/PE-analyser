@@ -4,11 +4,8 @@ import { useDataContext } from '../../context/DataContext';
 function RangeSelector() {
   const { state, dispatch } = useDataContext();
 
-  console.log('RangeSelector mounted, current state:', state.dateRange);
-
   // Define setDefaultRanges function
   const setDefaultRanges = useCallback(() => {
-    console.log('Setting default ranges...');
     const currentDate = new Date();
     const startDate = new Date('2024-04-01'); // Apr-24
     
@@ -29,7 +26,6 @@ function RangeSelector() {
       const endYearStr = endDate.getFullYear().toString().slice(-2);
       const endValue = `${endMonthStr}-${endYearStr}`;
       
-      console.log('Setting default date range:', { start: startValue, end: endValue });
       dispatch({ type: 'SET_DATE_RANGE', payload: { start: startValue, end: endValue } });
     }
     
@@ -72,14 +68,12 @@ function RangeSelector() {
   // Also set default ranges when view type changes
   useEffect(() => {
     if (state.viewType) {
-      console.log('View type changed, setting default ranges for:', state.viewType);
       setDefaultRanges();
     }
   }, [state.viewType, setDefaultRanges]);
 
   const handleDateRangeChange = (field, value) => {
-    console.log('RangeSelector - Date range change:', field, value);
-    console.log('RangeSelector - Current state:', state.dateRange);
+
     dispatch({ 
       type: 'SET_DATE_RANGE', 
       payload: { ...state.dateRange, [field]: value } 

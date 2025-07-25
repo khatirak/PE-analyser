@@ -74,9 +74,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', message: 'Backend is running' });
 });
 
-// Sample data loading disabled - users must upload their own data
-console.log('📊 Sample data loading disabled - users must upload their own CSV file');
-
 // Serve static files for React app (if needed)
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'build')));
 

@@ -17,44 +17,8 @@ router.get('/revenue', (req, res) => {
         pharmacyList = pharmacies.split(',');
       }
     }
-    const acquisitionDatesMap = acquisition_dates ? JSON.parse(acquisition_dates) : null;
+    const acquisitionDatesMap = acquisition_dates ? JSON.parse(acquisition_dates) : null;    
     
-    console.log('📊 Parsed pharmacy list:', pharmacyList);
-    
-    const revenueData = dataService.getRevenueData(
-      pharmacyList,
-      acquisitionDatesMap,
-      acquisition_date
-    );
-    
-    // Return a mock structure for now to prevent the "periods" error
-    const mockResponse = {
-      periods: [
-        { 
-          period: '2024-01', 
-          revenue: 100000,
-          percentage_change: null,
-          change_direction: null
-        },
-        { 
-          period: '2024-02', 
-          revenue: 120000,
-          percentage_change: 20.0,
-          change_direction: 'increase'
-        },
-        { 
-          period: '2024-03', 
-          revenue: 110000,
-          percentage_change: -8.3,
-          change_direction: 'decrease'
-        }
-      ],
-      current_period: '2024-03',
-      total_revenue: 330000
-    };
-    
-    console.log('✅ Revenue data response:', mockResponse);
-    res.json(mockResponse);
   } catch (error) {
     console.error('❌ Revenue error:', error);
     res.status(500).json({ error: 'Error fetching revenue data' });

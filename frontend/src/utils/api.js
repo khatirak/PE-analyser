@@ -9,8 +9,6 @@ const api = axios.create({
 // Simple request interceptor for logging only
 api.interceptors.request.use(
   (config) => {
-    console.log(`🚀 Making ${config.method?.toUpperCase()} request to: ${config.baseURL}${config.url}`);
-    console.log('Request config:', config);
     return config;
   },
   (error) => {
@@ -22,14 +20,11 @@ api.interceptors.request.use(
 // Simple response interceptor for logging only
 api.interceptors.response.use(
   (response) => {
-    console.log(`✅ Response from ${response.config.url}:`, response.status);
     return response;
   },
   (error) => {
-    console.error(`❌ Error from ${error.config?.url}:`, error.message);
-    console.error('Full error details:', error);
+
     if (error.response) {
-      console.error('Response data:', error.response.data);
       console.error('Response status:', error.response.status);
     }
     return Promise.reject(error);
@@ -39,13 +34,9 @@ api.interceptors.response.use(
 // Test with native fetch
 export const testFetchConnection = async () => {
   try {
-    console.log('Testing with native fetch...');
     const testUrl = process.env.NODE_ENV === 'production' ? '/stats' : `${API_CONFIG.BASE_URL}/stats`;
-    console.log('Testing connection to:', testUrl);
     const response = await fetch(testUrl);
-    console.log('Fetch response status:', response.status);
     const data = await response.json();
-    console.log('Fetch data:', data);
     return true;
   } catch (error) {
     console.error('Fetch test failed:', error);
@@ -68,9 +59,7 @@ export const uploadFile = async (file) => {
 
 export const fetchStats = async () => {
   try {
-    console.log('🔍 Fetching stats from:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.STATS}`);
     const response = await api.get(API_CONFIG.ENDPOINTS.STATS);
-    console.log('✅ Stats fetched successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ Error fetching stats:', error);
@@ -80,9 +69,7 @@ export const fetchStats = async () => {
 
 export const fetchPharmacies = async () => {
   try {
-    console.log('🔍 Fetching pharmacies from:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PHARMACIES}`);
     const response = await api.get(API_CONFIG.ENDPOINTS.PHARMACIES);
-    console.log('✅ Pharmacies fetched successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ Error fetching pharmacies:', error);
@@ -92,9 +79,7 @@ export const fetchPharmacies = async () => {
 
 export const fetchClusters = async () => {
   try {
-    console.log('🔍 Fetching clusters from:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CLUSTERS}`);
     const response = await api.get(API_CONFIG.ENDPOINTS.CLUSTERS);
-    console.log('✅ Clusters fetched successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ Error fetching clusters:', error);
@@ -104,9 +89,7 @@ export const fetchClusters = async () => {
 
 export const fetchMetrics = async () => {
   try {
-    console.log('🔍 Fetching metrics from:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.METRICS}`);
     const response = await api.get(API_CONFIG.ENDPOINTS.METRICS);
-    console.log('✅ Metrics fetched successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ Error fetching metrics:', error);
@@ -116,10 +99,7 @@ export const fetchMetrics = async () => {
 
 export const fetchChartData = async (params) => {
   try {
-    console.log('🔍 Fetching chart data from:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CHART_DATA}`);
-    console.log('📊 Chart data params:', params);
     const response = await api.get(API_CONFIG.ENDPOINTS.CHART_DATA, { params });
-    console.log('✅ Chart data fetched successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ Error fetching chart data:', error);

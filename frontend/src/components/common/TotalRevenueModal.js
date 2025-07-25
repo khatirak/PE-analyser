@@ -14,16 +14,8 @@ function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) 
     setError(null);
     try {
       // Use the new unfiltered score card data method
-      console.log('🔍 Loading total revenue score card data for view type:', state.viewType);
       const data = await fetchTotalRevenueScoreCardData(state.viewType);
-      console.log('✅ Total revenue score card data loaded:', data);
-      console.log('📊 Revenue data structure check:', {
-        hasData: !!data,
-        hasPeriods: !!data?.periods,
-        periodsLength: data?.periods?.length,
-        currentPeriod: data?.current_period,
-        samplePeriod: data?.periods?.[0]
-      });
+      
       setRevenueData(data);
     } catch (error) {
       console.error('Error loading total revenue data:', error);
@@ -37,7 +29,6 @@ function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) 
     if (isOpen) {
       if (passedRevenueData) {
         // Use passed data from chart
-        console.log('📊 Using passed revenue data from chart:', passedRevenueData);
         setRevenueData(passedRevenueData);
         setLoading(false);
         setError(null);

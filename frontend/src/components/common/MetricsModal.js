@@ -17,12 +17,7 @@ function MetricsModal({ isOpen, onClose }) {
     setLoading(true);
     setError(null);
     try {
-      console.log('🔍 Loading metrics...');
       const data = await fetchMetrics();
-      console.log('✅ Metrics loaded:', data);
-      console.log('📊 Metrics structure check:', data.slice(0, 5).map(metric => ({
-        name: metric.name
-      })));
       setMetrics(data);
     } catch (error) {
       console.error('❌ Error loading metrics:', error);

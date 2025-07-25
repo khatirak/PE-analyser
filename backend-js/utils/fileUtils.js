@@ -5,7 +5,6 @@ const config = require('../config');
 function ensureUploadDirectory() {
   // Skip directory creation in serverless environments (like Vercel)
   if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
-    console.log('⚠️  Skipping upload directory creation in production/serverless environment');
     return null;
   }
   
@@ -14,11 +13,9 @@ function ensureUploadDirectory() {
   try {
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
-      console.log('✅ Upload directory created:', uploadPath);
     }
     return uploadPath;
   } catch (error) {
-    console.warn('⚠️  Could not create upload directory:', error.message);
     return null;
   }
 }

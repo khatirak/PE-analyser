@@ -11,9 +11,8 @@ function StatsGrid() {
   const [isClusterModalOpen, setIsClusterModalOpen] = useState(false);
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
 
-  console.log('StatsGrid - state.stats:', state.stats);
+  
   if (!state.stats) {
-    console.log('StatsGrid - No stats available');
     return (
       <div className="text-center py-12">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-8">

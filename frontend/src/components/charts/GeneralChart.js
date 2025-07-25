@@ -40,7 +40,7 @@ function GeneralChart() {
     
     // Set default date range if not set
     if (!state.dateRange.start || !state.dateRange.end) {
-      console.log('Setting default date range in GeneralChart...');
+      
       const startDate = new Date('2024-04-01');
       
       const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
@@ -58,13 +58,11 @@ function GeneralChart() {
       const endYearStr = endDate.getFullYear().toString().slice(-2);
       const endValue = `${endMonthStr}-${endYearStr}`;
       
-      console.log('Setting default date range:', { start: startValue, end: endValue });
       dispatch({ type: 'SET_DATE_RANGE', payload: { start: startValue, end: endValue } });
     }
     
     // Set default quarter range if not set
     if (!state.quarterRange.start || !state.quarterRange.end) {
-      console.log('Setting default quarter range in GeneralChart...');
       const startQuarter = '2025 Q1';
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
       const month = currentDate.getMonth() + 1;
@@ -84,17 +82,16 @@ function GeneralChart() {
       }
       const endQuarter = `${defaultFY} ${defaultQ}`;
       
-      console.log('Setting default quarter range:', { start: startQuarter, end: endQuarter });
+      
       dispatch({ type: 'SET_QUARTER_RANGE', payload: { start: startQuarter, end: endQuarter } });
     }
     
     // Set default fiscal year range if not set
     if (!state.fiscalYearRange.start || !state.fiscalYearRange.end) {
-      console.log('Setting default fiscal year range in GeneralChart...');
+      
       const startFY = '2025';
       const currentFY = currentDate.getMonth() < 3 ? currentDate.getFullYear() : currentDate.getFullYear() + 1;
       
-      console.log('Setting default fiscal year range:', { start: startFY, end: currentFY.toString() });
       dispatch({ type: 'SET_FISCAL_YEAR_RANGE', payload: { start: startFY, end: currentFY.toString() } });
     }
   }, [state.dateRange.start, state.dateRange.end, state.quarterRange.start, state.quarterRange.end, state.fiscalYearRange.start, state.fiscalYearRange.end, dispatch]);
@@ -208,11 +205,6 @@ function GeneralChart() {
   };
 
   const finalTotalData = getTotalData();
-
-  // Debug logging
-  console.log('GeneralChart render - Date range:', state.dateRange);
-  console.log('GeneralChart render - Chart data labels:', chartData.labels);
-  console.log('GeneralChart render - Transformed data:', transformedData);
 
   const colors = [
     '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6',

@@ -28,18 +28,12 @@ function GeneralCard({ viewType }) {
         
         // Fetch total revenue data (unfiltered, only view type)
         const totalRevenueResponse = await fetchTotalRevenueScoreCardData(viewType);
-        console.log('✅ Total revenue score card data from API:', {
-          hasData: !!totalRevenueResponse,
-          labels: totalRevenueResponse?.labels,
-          datasets: totalRevenueResponse?.datasets?.length,
-          sampleData: totalRevenueResponse?.datasets?.[0]?.data?.slice(0, 5)
-        });
+        
         setTotalRevenueData(totalRevenueResponse);
         
         // Fetch selected metric data (unfiltered, only view type)
         if (state.selectedMetric) {
           const selectedMetricResponse = await fetchSelectedMetricScoreCardData(state.selectedMetric, viewType);
-          console.log('✅ Selected metric score card data:', selectedMetricResponse);
           setSelectedMetricData(selectedMetricResponse);
         }
       } catch (error) {
@@ -59,12 +53,6 @@ function GeneralCard({ viewType }) {
       console.log('❌ No total revenue data available for processing');
       return null;
     }
-
-    console.log('🔍 Processing total revenue data:', {
-      labels: totalRevenueData.labels,
-      datasets: totalRevenueData.datasets.length,
-      sampleData: totalRevenueData.datasets[0]?.data?.slice(0, 5)
-    });
 
     const periods = totalRevenueData.labels.map((label, index) => {
       // Calculate total revenue for this period (sum of all datasets)
@@ -96,15 +84,7 @@ function GeneralCard({ viewType }) {
     });
 
     const currentPeriod = periods.length > 0 ? periods[periods.length - 1].period : null;
-    const totalRevenue = periods.reduce((sum, p) => sum + p.revenue, 0);
-
-    console.log('✅ Processed total revenue data:', {
-      periodsCount: periods.length,
-      currentPeriod,
-      totalRevenue,
-      samplePeriods: periods.slice(0, 3)
-    });
-
+    const totalRevenue = periods.reduce((sum, p) => sum + p.revenue, 0)
     return {
       periods,
       current_period: currentPeriod,

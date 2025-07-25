@@ -18,15 +18,7 @@ function PharmacyModal({ isOpen, onClose }) {
     setLoading(true);
     setError(null);
     try {
-      console.log('🔍 Loading pharmacies...');
       const data = await fetchPharmacies();
-      console.log('✅ Pharmacies loaded:', data);
-      console.log('📊 Pharmacy structure check:', data.slice(0, 3).map(pharmacy => ({
-        name: pharmacy.name,
-        cluster: pharmacy.cluster,
-        status: pharmacy.status,
-        acquisition_date: pharmacy.acquisition_date
-      })));
       setPharmacies(data);
     } catch (error) {
       console.error('❌ Error loading pharmacies:', error);
