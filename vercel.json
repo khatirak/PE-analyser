@@ -1,8 +1,54 @@
 {
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/api/index"
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    },
+    {
+      "src": "backend-js/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/stats",
+      "dest": "backend-js/server.js"
+    },
+    {
+      "src": "/pharmacies",
+      "dest": "backend-js/server.js"
+    },
+    {
+      "src": "/clusters",
+      "dest": "backend-js/server.js"
+    },
+    {
+      "src": "/metrics",
+      "dest": "backend-js/server.js"
+    },
+    {
+      "src": "/chart",
+      "dest": "backend-js/server.js"
+    },
+    {
+      "src": "/revenue",
+      "dest": "backend-js/server.js"
+    },
+    {
+      "src": "/upload",
+      "dest": "backend-js/server.js"
+    },
+    {
+      "src": "/health",
+      "dest": "backend-js/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
     }
   ]
 }

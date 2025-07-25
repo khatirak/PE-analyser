@@ -3,16 +3,16 @@ export const API_CONFIG = {
   BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:5001',
   ENDPOINTS: {
     UPLOAD: '/upload',
-    STATS: '/api/stats',
-    PHARMACIES: '/api/pharmacies',
-    CLUSTERS: '/api/clusters',
-    METRICS: '/api/metrics',
-    REVENUE_DATA: '/api/revenue-data',
-    REVENUE_BY_PERIOD: '/api/revenue-by-period',
-    TOTAL_REVENUE_DATA: '/api/total-revenue-data',
-    SELECTED_METRIC_DATA: '/api/selected-metric-data',
-    MONTHLY_REVENUE: '/api/monthly-revenue',
-    CHART_DATA: '/api/chart-data'
+    STATS: '/stats',
+    PHARMACIES: '/pharmacies',
+    CLUSTERS: '/clusters',
+    METRICS: '/metrics',
+    REVENUE_DATA: '/revenue',
+    REVENUE_BY_PERIOD: '/revenue',
+    TOTAL_REVENUE_DATA: '/revenue',
+    SELECTED_METRIC_DATA: '/chart',
+    MONTHLY_REVENUE: '/revenue',
+    CHART_DATA: '/chart'
   }
 };
 

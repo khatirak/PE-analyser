@@ -11,14 +11,16 @@ function StatsGrid() {
   const [isClusterModalOpen, setIsClusterModalOpen] = useState(false);
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
 
+  console.log('StatsGrid - state.stats:', state.stats);
   if (!state.stats) {
+    console.log('StatsGrid - No stats available');
     return null;
   }
 
   const stats = [
     {
       name: 'Total Pharmacies',
-      value: state.stats.unique_pharmacies || 0,
+      value: state.stats.uniquePharmacies || 0,
       icon: Building2,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
@@ -27,7 +29,7 @@ function StatsGrid() {
     },
     {
       name: 'Total Rows',
-      value: state.stats.total_rows || 0,
+      value: state.stats.totalRows || 0,
       icon: BarChart3,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
@@ -35,7 +37,7 @@ function StatsGrid() {
     },
     {
       name: 'Unique Clusters',
-      value: state.stats.unique_clusters || 0,
+      value: state.stats.uniqueClusters || 0,
       icon: Users,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
@@ -44,7 +46,7 @@ function StatsGrid() {
     },
     {
       name: 'Unique Metrics',
-      value: state.stats.unique_metrics || 0,
+      value: state.stats.uniqueMetrics || 0,
       icon: TrendingUp,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',

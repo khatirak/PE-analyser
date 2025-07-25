@@ -77,9 +77,15 @@ export function DataProvider({ children }) {
         
         // Test with fetch first
         console.log('Testing with fetch...');
-        const fetchWorks = await testFetchConnection();
-        if (!fetchWorks) {
-          console.error('Fetch test failed - there may be a CORS or network issue');
+        try {
+          const fetchWorks = await testFetchConnection();
+          if (!fetchWorks) {
+            console.error('Fetch test failed - there may be a CORS or network issue');
+          } else {
+            console.log('✅ Fetch test successful');
+          }
+        } catch (error) {
+          console.error('❌ Fetch test error:', error);
         }
         
         // Load stats directly without connection test
@@ -90,29 +96,61 @@ export function DataProvider({ children }) {
         
         // Load pharmacies
         console.log('Loading pharmacies...');
-        const pharmacies = await fetchPharmacies();
-        console.log('Pharmacies loaded:', pharmacies);
-        dispatch({ type: 'SET_PHARMACIES', payload: pharmacies });
+        let pharmacies = null;
+        try {
+          pharmacies = await fetchPharmacies();
+          console.log('Pharmacies loaded:', pharmacies);
+          dispatch({ type: 'SET_PHARMACIES', payload: pharmacies });
+        } catch (error) {
+          console.error('❌ Error loading pharmacies:', error);
+          throw error;
+        }
         
         // Load clusters
         console.log('Loading clusters...');
-        const clusters = await fetchClusters();
-        console.log('Clusters loaded:', clusters);
-        dispatch({ type: 'SET_CLUSTERS', payload: clusters });
+        let clusters = null;
+        try {
+          clusters = await fetchClusters();
+          console.log('Clusters loaded:', clusters);
+          dispatch({ type: 'SET_CLUSTERS', payload: clusters });
+        } catch (error) {
+          console.error('❌ Error loading clusters:', error);
+          throw error;
+        }
         
         // Load metrics
         console.log('Loading metrics...');
-        const metrics = await fetchMetrics();
-        console.log('Metrics loaded:', metrics);
-        dispatch({ type: 'SET_METRICS', payload: metrics });
+        let metrics = null;
+        try {
+          metrics = await fetchMetrics();
+          console.log('Metrics loaded:', metrics);
+          dispatch({ type: 'SET_METRICS', payload: metrics });
+        } catch (error) {
+          console.error('❌ Error loading metrics:', error);
+          throw error;
+        }
         
         // Auto-select all pharmacies initially
-        dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: pharmacies.map(p => p.name) });
+        console.log('🔍 Auto-selecting pharmacies:', { 
+          pharmacies: pharmacies, 
+          isArray: Array.isArray(pharmacies),
+          length: pharmacies?.length,
+          samplePharmacy: pharmacies?.[0]
+        });
+        
+        if (pharmacies && Array.isArray(pharmacies) && pharmacies.length > 0) {
+          const pharmacyNames = pharmacies.map(p => p.name);
+          console.log('✅ Auto-selecting pharmacy names:', pharmacyNames.slice(0, 5), '... (total:', pharmacyNames.length, ')');
+          dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: pharmacyNames });
+        } else {
+          console.log('❌ No pharmacies to auto-select - pharmacies:', pharmacies);
+        }
         
         // Set data flag to indicate data is available
         dispatch({ type: 'SET_DATA', payload: { loaded: true } });
         
-        console.log('Initial data loading completed successfully');
+        console.log('✅ Initial data loading completed successfully');
+        console.log('🔍 Final state check - pharmacies loaded:', pharmacies?.length, 'clusters loaded:', clusters?.length, 'metrics loaded:', metrics?.length);
         
       } catch (error) {
         console.error('Error loading initial data:', error);
@@ -125,6 +163,14 @@ export function DataProvider({ children }) {
 
     loadInitialData();
   }, []);
+
+  // Monitor selectedPharmacies changes
+  useEffect(() => {
+    console.log('🔍 DataContext - selectedPharmacies changed:', {
+      count: state.selectedPharmacies.length,
+      pharmacies: state.selectedPharmacies.slice(0, 5)
+    });
+  }, [state.selectedPharmacies]);
 
   return (
     <DataContext.Provider value={{ state, dispatch }}>

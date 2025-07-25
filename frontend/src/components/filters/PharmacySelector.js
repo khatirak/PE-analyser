@@ -50,13 +50,17 @@ function PharmacySelector() {
 
   const selectAll = () => {
     if (selectionMode === 'pharmacies') {
-      dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: state.pharmacies.map(p => p.name) });
+      if (state.pharmacies && Array.isArray(state.pharmacies)) {
+        dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: state.pharmacies.map(p => p.name) });
+      }
     } else {
       // Select all pharmacies from all clusters
-      const allPharmacyNames = state.clusters.flatMap(cluster => 
-        cluster.pharmacies.map(p => p.name)
-      );
-      dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: allPharmacyNames });
+      if (state.clusters && Array.isArray(state.clusters)) {
+        const allPharmacyNames = state.clusters.flatMap(cluster => 
+          cluster.pharmacies && Array.isArray(cluster.pharmacies) ? cluster.pharmacies.map(p => p.name) : []
+        );
+        dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: allPharmacyNames });
+      }
     }
   };
 
@@ -66,13 +70,13 @@ function PharmacySelector() {
 
 
 
-  const acquiredPharmacies = state.pharmacies.filter(p => p.status === 'acquired');
-  const pipelinePharmacies = state.pharmacies.filter(p => p.status === 'pipeline');
+  const acquiredPharmacies = state.pharmacies && Array.isArray(state.pharmacies) ? state.pharmacies.filter(p => p.status === 'acquired') : [];
+  const pipelinePharmacies = state.pharmacies && Array.isArray(state.pharmacies) ? state.pharmacies.filter(p => p.status === 'pipeline') : [];
 
   // Helper function to check if a cluster is fully selected
   const isClusterFullySelected = (clusterName) => {
-    const cluster = state.clusters.find(c => c.name === clusterName);
-    if (!cluster) return false;
+    const cluster = state.clusters && Array.isArray(state.clusters) ? state.clusters.find(c => c.name === clusterName) : null;
+    if (!cluster || !cluster.pharmacies || !Array.isArray(cluster.pharmacies)) return false;
     
     const clusterPharmacyNames = cluster.pharmacies.map(p => p.name);
     return clusterPharmacyNames.every(name => state.selectedPharmacies.includes(name));
@@ -99,8 +103,8 @@ function PharmacySelector() {
 
   // Helper function to check if a cluster is partially selected
   const isClusterPartiallySelected = (clusterName) => {
-    const cluster = state.clusters.find(c => c.name === clusterName);
-    if (!cluster) return false;
+    const cluster = state.clusters && Array.isArray(state.clusters) ? state.clusters.find(c => c.name === clusterName) : null;
+    if (!cluster || !cluster.pharmacies || !Array.isArray(cluster.pharmacies)) return false;
     
     const clusterPharmacyNames = cluster.pharmacies.map(p => p.name);
     const selectedInCluster = clusterPharmacyNames.filter(name => 
@@ -252,7 +256,7 @@ function PharmacySelector() {
           // Cluster Selection
           <div>
             <h4 className="text-sm font-medium text-gray-700 mb-2">Clusters</h4>
-            {state.clusters.map(cluster => (
+            {state.clusters && Array.isArray(state.clusters) ? state.clusters.map(cluster => (
               <ClusterItem
                 key={cluster.name}
                 cluster={cluster}
@@ -261,7 +265,7 @@ function PharmacySelector() {
                 selectedPharmacies={state.selectedPharmacies}
                 onToggle={handleClusterToggle}
               />
-            ))}
+            )) : null}
           </div>
         )}
       </div>
@@ -301,9 +305,9 @@ function ClusterItem({ cluster, isFullySelected, isPartiallySelected, selectedPh
     }
   };
 
-  const selectedCount = cluster.pharmacies.filter(p => 
+  const selectedCount = cluster.pharmacies && Array.isArray(cluster.pharmacies) ? cluster.pharmacies.filter(p => 
     selectedPharmacies.includes(p.name)
-  ).length;
+  ).length : 0;
 
   return (
     <div className="border border-gray-200 rounded-lg p-3">
@@ -319,6 +323,7 @@ function ClusterItem({ cluster, isFullySelected, isPartiallySelected, selectedPh
           onChange={() => onToggle(cluster.name)}
           className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
         />
+        {getSelectionIcon()}
         <Users className="h-4 w-4 text-purple-500" />
         <div className="flex-1">
           <div className="flex items-center justify-between">
@@ -328,7 +333,7 @@ function ClusterItem({ cluster, isFullySelected, isPartiallySelected, selectedPh
             </span>
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            {cluster.pharmacies.map(p => p.name).join(', ')}
+            {cluster.pharmacies && Array.isArray(cluster.pharmacies) ? cluster.pharmacies.map(p => p.name).join(', ') : ''}
           </div>
         </div>
       </label>

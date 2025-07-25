@@ -9,13 +9,16 @@ export const useChartData = () => {
 
   // Memoize the parameters to prevent unnecessary API calls
   const chartParams = useMemo(() => {
+    console.log('🔍 useChartData - selectedPharmacies:', state.selectedPharmacies);
+    
     if (state.selectedPharmacies.length === 0) {
+      console.log('❌ No pharmacies selected, skipping chart data fetch');
       return null;
     }
 
     const params = {
       view_type: state.viewType,
-      'pharmacies[]': state.selectedPharmacies,
+      pharmacies: state.selectedPharmacies,
       acquisition_date: state.acquisitionDate,
       metric: state.selectedMetric
     };
