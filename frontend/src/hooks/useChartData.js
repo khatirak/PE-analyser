@@ -10,6 +10,8 @@ export const useChartData = () => {
   // Memoize the parameters to prevent unnecessary API calls
   const chartParams = useMemo(() => {
     console.log('🔍 useChartData - selectedPharmacies:', state.selectedPharmacies);
+    console.log('🔍 useChartData - stats available:', !!state.stats);
+    console.log('🔍 useChartData - pharmacies available:', state.pharmacies?.length);
     
     if (state.selectedPharmacies.length === 0) {
       console.log('❌ No pharmacies selected, skipping chart data fetch');

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, BarChart3 } from 'lucide-react';
 import { useDataContext } from '../../context/DataContext';
-import { uploadFile } from '../../utils/api';
+import { uploadFile, fetchStats, fetchPharmacies, fetchClusters, fetchMetrics } from '../../utils/api';
 
 function Header() {
   const { state, dispatch } = useDataContext();
@@ -38,10 +38,57 @@ function Header() {
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
+      console.log('📤 Uploading file:', file.name);
+      
+      // Upload the file
       const result = await uploadFile(file);
-      dispatch({ type: 'SET_DATA', payload: result });
-      dispatch({ type: 'SET_STATS', payload: result.stats });
+      console.log('✅ File uploaded successfully:', result);
+      
+      // Reload all data after successful upload
+      console.log('🔄 Reloading data after upload...');
+      
+      // Fetch updated stats
+      const stats = await fetchStats();
+      console.log('✅ Stats reloaded:', stats);
+      dispatch({ type: 'SET_STATS', payload: stats });
+      
+      // Fetch updated pharmacies
+      const pharmacies = await fetchPharmacies();
+      console.log('✅ Pharmacies reloaded:', pharmacies);
+      dispatch({ type: 'SET_PHARMACIES', payload: pharmacies });
+      
+      // Fetch updated clusters
+      const clusters = await fetchClusters();
+      console.log('✅ Clusters reloaded:', clusters);
+      dispatch({ type: 'SET_CLUSTERS', payload: clusters });
+      
+      // Fetch updated metrics
+      const metrics = await fetchMetrics();
+      console.log('✅ Metrics reloaded:', metrics);
+      dispatch({ type: 'SET_METRICS', payload: metrics });
+      
+      // Auto-select all pharmacies
+      if (pharmacies && Array.isArray(pharmacies) && pharmacies.length > 0) {
+        const pharmacyNames = pharmacies.map(p => p.name);
+        console.log('✅ Auto-selecting pharmacies after upload:', pharmacyNames.slice(0, 5), '... (total:', pharmacyNames.length, ')');
+        dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: pharmacyNames });
+      }
+      
+      // Set data flag
+      dispatch({ type: 'SET_DATA', payload: { loaded: true } });
+      
+      // Clear chart data to force refresh
+      dispatch({ type: 'SET_CHART_DATA', payload: null });
+      
+      console.log('🎉 All data reloaded successfully after upload!');
+      
+      // Small delay to ensure all state updates are processed
+      setTimeout(() => {
+        console.log('⏰ Triggering chart data refresh after upload...');
+      }, 500);
+      
     } catch (error) {
+      console.error('❌ Error during file upload:', error);
       dispatch({ type: 'SET_ERROR', payload: error.message });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
