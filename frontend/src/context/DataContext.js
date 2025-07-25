@@ -77,6 +77,8 @@ export function DataProvider({ children }) {
         
         // Test with fetch first
         console.log('Testing with fetch...');
+        console.log('Environment:', process.env.NODE_ENV);
+        console.log('API Base URL:', process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'relative' : 'http://localhost:5001'));
         try {
           const fetchWorks = await testFetchConnection();
           if (!fetchWorks) {

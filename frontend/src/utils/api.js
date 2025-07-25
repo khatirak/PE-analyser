@@ -40,7 +40,9 @@ api.interceptors.response.use(
 export const testFetchConnection = async () => {
   try {
     console.log('Testing with native fetch...');
-    const response = await fetch(`${API_CONFIG.BASE_URL}/stats`);
+    const testUrl = process.env.NODE_ENV === 'production' ? '/stats' : `${API_CONFIG.BASE_URL}/stats`;
+    console.log('Testing connection to:', testUrl);
+    const response = await fetch(testUrl);
     console.log('Fetch response status:', response.status);
     const data = await response.json();
     console.log('Fetch data:', data);
