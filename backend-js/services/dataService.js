@@ -240,12 +240,27 @@ class DataService {
   _applyCustomAcquisitionFilter(revenueData, acquisitionDate) {
     if (!acquisitionDate) return revenueData;
     
+    // Parse the filter date (e.g., "Aug-24" -> August 1, 2024)
     const filterDate = parseDate(acquisitionDate);
     if (!filterDate) return revenueData;
     
+    // Get pharmacy acquisition dates from the data
+    const pharmacyAcquisitionDates = {};
+    revenueData.forEach(row => {
+      if (!pharmacyAcquisitionDates[row.Pharmacy] && row.Acquisition_Date) {
+        pharmacyAcquisitionDates[row.Pharmacy] = parseDate(row.Acquisition_Date);
+      }
+    });
+    
+    // Filter data to only include pharmacies acquired on or before the filter date
     return revenueData.filter(row => {
-      const rowDate = new Date(row.Date);
-      return rowDate >= filterDate;
+      const pharmacyAcquisitionDate = pharmacyAcquisitionDates[row.Pharmacy];
+      
+      // If pharmacy has no acquisition date, exclude it
+      if (!pharmacyAcquisitionDate) return false;
+      
+      // Include pharmacy if it was acquired on or before the filter date
+      return pharmacyAcquisitionDate <= filterDate;
     });
   }
   

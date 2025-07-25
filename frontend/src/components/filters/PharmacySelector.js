@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../../context/DataContext';
 import { CheckCircle, Circle, Building2, Users } from 'lucide-react';
 
 function PharmacySelector() {
   const { state, dispatch } = useDataContext();
   const [selectionMode, setSelectionMode] = useState(state.pharmacySelectionMode || 'pharmacies'); // 'pharmacies' or 'clusters'
+
+  // Monitor selectedPharmacies changes
+  useEffect(() => {
+    console.log('🔍 selectedPharmacies state changed:', {
+      selectedPharmacies: state.selectedPharmacies,
+      length: state.selectedPharmacies.length,
+      acquisitionDate: state.acquisitionDate
+    });
+  }, [state.selectedPharmacies, state.acquisitionDate]);
 
   const handlePharmacyToggle = (pharmacyName) => {
     const isSelected = state.selectedPharmacies.includes(pharmacyName);
@@ -24,21 +33,30 @@ function PharmacySelector() {
     const cluster = state.clusters.find(c => c.name === clusterName);
     if (!cluster) return;
 
-    const clusterPharmacyNames = cluster.pharmacies.map(p => p.name);
-    const currentlySelectedInCluster = clusterPharmacyNames.filter(name => 
+    // Get eligible pharmacies in this cluster (considering acquisition filter)
+    const eligiblePharmacyNames = cluster.pharmacies
+      .map(p => p.name)
+      .filter(pharmacyName => {
+        const pharmacy = state.pharmacies.find(p => p.name === pharmacyName);
+        return pharmacy && shouldIncludePharmacy(pharmacy);
+      });
+
+    if (eligiblePharmacyNames.length === 0) return;
+
+    const currentlySelectedInCluster = eligiblePharmacyNames.filter(name => 
       state.selectedPharmacies.includes(name)
     );
 
     let newSelected;
-    if (currentlySelectedInCluster.length === clusterPharmacyNames.length) {
-      // All pharmacies in cluster are selected, so deselect all
+    if (currentlySelectedInCluster.length === eligiblePharmacyNames.length) {
+      // All eligible pharmacies in cluster are selected, so deselect all
       newSelected = state.selectedPharmacies.filter(name => 
-        !clusterPharmacyNames.includes(name)
+        !eligiblePharmacyNames.includes(name)
       );
     } else {
-      // Not all pharmacies in cluster are selected, so select all
+      // Not all eligible pharmacies in cluster are selected, so select all
       newSelected = [...state.selectedPharmacies];
-      clusterPharmacyNames.forEach(name => {
+      eligiblePharmacyNames.forEach(name => {
         if (!newSelected.includes(name)) {
           newSelected.push(name);
         }
@@ -50,16 +68,28 @@ function PharmacySelector() {
 
   const selectAll = () => {
     if (selectionMode === 'pharmacies') {
-      if (state.pharmacies && Array.isArray(state.pharmacies)) {
-      dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: state.pharmacies.map(p => p.name) });
+      // Use filtered pharmacies when acquisition date filter is applied
+      const pharmaciesToSelect = state.acquisitionDate ? filteredPharmacies : state.pharmacies;
+      if (pharmaciesToSelect && Array.isArray(pharmaciesToSelect)) {
+        dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: pharmaciesToSelect.map(p => p.name) });
       }
     } else {
-      // Select all pharmacies from all clusters
+      // Select all pharmacies from all clusters (considering acquisition filter)
       if (state.clusters && Array.isArray(state.clusters)) {
-      const allPharmacyNames = state.clusters.flatMap(cluster => 
+        const allPharmacyNames = state.clusters.flatMap(cluster => 
           cluster.pharmacies && Array.isArray(cluster.pharmacies) ? cluster.pharmacies.map(p => p.name) : []
-      );
-      dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: allPharmacyNames });
+        );
+        
+        // If acquisition filter is applied, only select pharmacies that meet the criteria
+        if (state.acquisitionDate) {
+          const eligiblePharmacyNames = allPharmacyNames.filter(pharmacyName => {
+            const pharmacy = state.pharmacies.find(p => p.name === pharmacyName);
+            return pharmacy && shouldIncludePharmacy(pharmacy);
+          });
+          dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: eligiblePharmacyNames });
+        } else {
+          dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: allPharmacyNames });
+        }
       }
     }
   };
@@ -70,16 +100,95 @@ function PharmacySelector() {
 
 
 
-  const acquiredPharmacies = state.pharmacies && Array.isArray(state.pharmacies) ? state.pharmacies.filter(p => p.status === 'acquired') : [];
-  const pipelinePharmacies = state.pharmacies && Array.isArray(state.pharmacies) ? state.pharmacies.filter(p => p.status === 'pipeline') : [];
+  // Helper function to parse acquisition date string to Date object
+  // Handles both formats: "Apr-24" and "01 July 2025"
+  const parseAcquisitionDate = (dateStr) => {
+    if (!dateStr) return null;
+    
+    console.log('🔍 Parsing date:', dateStr);
+    
+    // Try to parse as short format first (e.g., "Apr-24")
+    if (dateStr.includes('-') && dateStr.length <= 7) {
+      const [month, year] = dateStr.split('-');
+      
+      // Handle 2-digit years (20xx for 20-99, 19xx for 00-19)
+      let fullYear;
+      const yearNum = parseInt(year);
+      if (yearNum >= 20) {
+        fullYear = 2000 + yearNum;
+      } else {
+        fullYear = 1900 + yearNum;
+      }
+      
+      // Get month index (0-11) - use a more reliable method
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthIndex = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase());
+      
+      if (monthIndex === -1) {
+        console.error('Invalid month:', month);
+        return null;
+      }
+      
+      const result = new Date(fullYear, monthIndex, 1);
+      console.log('✅ Parsed as short date:', { month, year, fullYear, monthIndex, result });
+      return result;
+    }
+    
+    // Try to parse as full date format (e.g., "01 July 2025")
+    const fullDate = new Date(dateStr);
+    if (!isNaN(fullDate.getTime())) {
+      console.log('✅ Parsed as full date:', fullDate);
+      return fullDate;
+    }
+    
+    console.log('❌ Could not parse date:', dateStr);
+    return null;
+  };
+
+  // Helper function to check if pharmacy should be included based on acquisition date filter
+  const shouldIncludePharmacy = (pharmacy) => {
+    if (!state.acquisitionDate) return true; // No filter applied
+    if (pharmacy.status !== 'acquired') return false; // Only acquired pharmacies are affected
+    
+    if (!pharmacy.acquisition_date) return false; // No acquisition date means not included
+    
+    const filterDate = parseAcquisitionDate(state.acquisitionDate);
+    const pharmacyDate = parseAcquisitionDate(pharmacy.acquisition_date);
+    
+    if (!filterDate || !pharmacyDate) {
+      return false;
+    }
+    
+    // Include pharmacy if its acquisition date is on or before the selected month
+    return pharmacyDate <= filterDate;
+  };
+
+  // Filter pharmacies based on acquisition date
+  const filteredPharmacies = state.pharmacies && Array.isArray(state.pharmacies) 
+    ? state.pharmacies.filter(shouldIncludePharmacy) 
+    : [];
+  
+  const acquiredPharmacies = filteredPharmacies.filter(p => p.status === 'acquired');
+  const pipelinePharmacies = state.acquisitionDate ? [] : (state.pharmacies && Array.isArray(state.pharmacies) ? state.pharmacies.filter(p => p.status === 'pipeline') : []);
+
+
 
   // Helper function to check if a cluster is fully selected
   const isClusterFullySelected = (clusterName) => {
     const cluster = state.clusters && Array.isArray(state.clusters) ? state.clusters.find(c => c.name === clusterName) : null;
     if (!cluster || !cluster.pharmacies || !Array.isArray(cluster.pharmacies)) return false;
     
-    const clusterPharmacyNames = cluster.pharmacies.map(p => p.name);
-    return clusterPharmacyNames.every(name => state.selectedPharmacies.includes(name));
+    // Get eligible pharmacies in this cluster (considering acquisition filter)
+    const eligiblePharmacyNames = cluster.pharmacies
+      .map(p => p.name)
+      .filter(pharmacyName => {
+        const pharmacy = state.pharmacies.find(p => p.name === pharmacyName);
+        return pharmacy && shouldIncludePharmacy(pharmacy);
+      });
+    
+    if (eligiblePharmacyNames.length === 0) return false;
+    
+    return eligiblePharmacyNames.every(name => state.selectedPharmacies.includes(name));
   };
 
   // Generate month options for acquisition date selector
@@ -106,12 +215,21 @@ function PharmacySelector() {
     const cluster = state.clusters && Array.isArray(state.clusters) ? state.clusters.find(c => c.name === clusterName) : null;
     if (!cluster || !cluster.pharmacies || !Array.isArray(cluster.pharmacies)) return false;
     
-    const clusterPharmacyNames = cluster.pharmacies.map(p => p.name);
-    const selectedInCluster = clusterPharmacyNames.filter(name => 
+    // Get eligible pharmacies in this cluster (considering acquisition filter)
+    const eligiblePharmacyNames = cluster.pharmacies
+      .map(p => p.name)
+      .filter(pharmacyName => {
+        const pharmacy = state.pharmacies.find(p => p.name === pharmacyName);
+        return pharmacy && shouldIncludePharmacy(pharmacy);
+      });
+    
+    if (eligiblePharmacyNames.length === 0) return false;
+    
+    const selectedInCluster = eligiblePharmacyNames.filter(name => 
       state.selectedPharmacies.includes(name)
     );
     
-    return selectedInCluster.length > 0 && selectedInCluster.length < clusterPharmacyNames.length;
+    return selectedInCluster.length > 0 && selectedInCluster.length < eligiblePharmacyNames.length;
   };
 
   return (
@@ -153,7 +271,7 @@ function PharmacySelector() {
 
       {/* Acquisition Month Selector */}
       <div className="space-y-2">
-        <label className="text-sm text-gray-700">Include data from selected month and prior:</label>
+        <label className="text-sm text-gray-700">Include acquisition data from selected month and prior:</label>
         <select
           value={state.acquisitionDate || ''}
           onChange={(e) => {
@@ -161,11 +279,51 @@ function PharmacySelector() {
             dispatch({ type: 'SET_ACQUISITION_DATE', payload: value });
             
             if (value) {
-              // Auto-deselect pipeline pharmacies when acquisition filter is enabled
-              const acquiredPharmacies = state.pharmacies
+              // Auto-select all acquired pharmacies that meet the acquisition date criteria
+              const eligiblePharmacies = state.pharmacies
+                .filter(p => {
+                  if (p.status !== 'acquired') return false;
+                  if (!p.acquisition_date) return false;
+                  
+                  const filterDate = parseAcquisitionDate(value);
+                  const pharmacyDate = parseAcquisitionDate(p.acquisition_date);
+                  
+                  const shouldInclude = filterDate && pharmacyDate && !isNaN(filterDate.getTime()) && !isNaN(pharmacyDate.getTime()) ? pharmacyDate <= filterDate : false;
+                  
+                  // Only log for specific pharmacies or when there's an issue
+                  if (p.name === 'Darwen' || shouldInclude) {
+                    console.log('🔍 Pharmacy date check:', {
+                      pharmacy: p.name,
+                      pharmacyDate: p.acquisition_date,
+                      parsedPharmacyDate: pharmacyDate,
+                      filterDate: value,
+                      parsedFilterDate: filterDate,
+                      isValid: filterDate && pharmacyDate && !isNaN(filterDate.getTime()) && !isNaN(pharmacyDate.getTime()),
+                      shouldInclude
+                    });
+                  }
+                  
+                  if (!filterDate || !pharmacyDate || isNaN(filterDate.getTime()) || isNaN(pharmacyDate.getTime())) return false;
+                  return pharmacyDate <= filterDate;
+                })
+                .map(p => p.name);
+              
+              console.log('🔍 Acquisition date selection:', {
+                selectedDate: value,
+                totalPharmacies: state.pharmacies.length,
+                acquiredPharmacies: state.pharmacies.filter(p => p.status === 'acquired').length,
+                eligiblePharmacies: eligiblePharmacies.length,
+                eligiblePharmacyNames: eligiblePharmacies
+              });
+              
+              console.log('🔍 Dispatching SET_SELECTED_PHARMACIES with:', eligiblePharmacies);
+              dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: eligiblePharmacies });
+            } else {
+              // When clearing the filter, select all acquired pharmacies
+              const allAcquiredPharmacies = state.pharmacies
                 .filter(p => p.status === 'acquired')
                 .map(p => p.name);
-              dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: acquiredPharmacies });
+              dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: allAcquiredPharmacies });
             }
           }}
           className="input-field text-sm w-full"
@@ -181,6 +339,11 @@ function PharmacySelector() {
           <button
             onClick={() => {
               dispatch({ type: 'SET_ACQUISITION_DATE', payload: '' });
+              // When clearing the filter, select all acquired pharmacies
+              const allAcquiredPharmacies = state.pharmacies
+                .filter(p => p.status === 'acquired')
+                .map(p => p.name);
+              dispatch({ type: 'SET_SELECTED_PHARMACIES', payload: allAcquiredPharmacies });
             }}
             className="btn-secondary text-xs px-3 py-1 w-full"
           >
@@ -264,6 +427,7 @@ function PharmacySelector() {
                 isPartiallySelected={isClusterPartiallySelected(cluster.name)}
                 selectedPharmacies={state.selectedPharmacies}
                 onToggle={handleClusterToggle}
+                shouldIncludePharmacy={shouldIncludePharmacy}
               />
             )) : null}
           </div>
@@ -294,7 +458,7 @@ function PharmacyItem({ pharmacy, isSelected, onToggle }) {
   );
 }
 
-function ClusterItem({ cluster, isFullySelected, isPartiallySelected, selectedPharmacies, onToggle }) {
+function ClusterItem({ cluster, isFullySelected, isPartiallySelected, selectedPharmacies, onToggle, shouldIncludePharmacy }) {
   const getSelectionIcon = () => {
     if (isFullySelected) {
       return <CheckCircle className="h-4 w-4 text-success-500" />;
@@ -305,9 +469,14 @@ function ClusterItem({ cluster, isFullySelected, isPartiallySelected, selectedPh
     }
   };
 
-  const selectedCount = cluster.pharmacies && Array.isArray(cluster.pharmacies) ? cluster.pharmacies.filter(p => 
+  // Get eligible pharmacies in this cluster (considering acquisition filter)
+  const eligiblePharmacies = cluster.pharmacies && Array.isArray(cluster.pharmacies) 
+    ? cluster.pharmacies.filter(p => shouldIncludePharmacy(p))
+    : [];
+  
+  const selectedCount = eligiblePharmacies.filter(p => 
     selectedPharmacies.includes(p.name)
-  ).length : 0;
+  ).length;
 
   return (
     <div className="border border-gray-200 rounded-lg p-3">
@@ -329,11 +498,11 @@ function ClusterItem({ cluster, isFullySelected, isPartiallySelected, selectedPh
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-900">{cluster.name}</span>
             <span className="text-xs text-gray-500">
-              {selectedCount}/{cluster.pharmacy_count} selected
+              {selectedCount}/{eligiblePharmacies.length} selected
             </span>
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            {cluster.pharmacies && Array.isArray(cluster.pharmacies) ? cluster.pharmacies.map(p => p.name).join(', ') : ''}
+            {eligiblePharmacies.map(p => p.name).join(', ')}
           </div>
         </div>
       </label>

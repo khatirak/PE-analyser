@@ -10,7 +10,15 @@ export const useChartData = () => {
   // Memoize the parameters to prevent unnecessary API calls
   const chartParams = useMemo(() => {
     
+    console.log('🔍 Chart params check:', {
+      selectedPharmacies: state.selectedPharmacies,
+      selectedPharmaciesLength: state.selectedPharmacies.length,
+      acquisitionDate: state.acquisitionDate,
+      selectedMetric: state.selectedMetric
+    });
+    
     if (state.selectedPharmacies.length === 0) {
+      console.log('⚠️ No selected pharmacies, returning null');
       return null;
     }
 
@@ -59,7 +67,9 @@ export const useChartData = () => {
   const loadChartData = useCallback(async (params) => {
     setLoading(true);
     try {
+      console.log('🔍 Fetching chart data with params:', params);
       const data = await fetchChartData(params);
+      console.log('🔍 Chart data response:', data);
       
       dispatch({ type: 'SET_CHART_DATA', payload: data });
     } catch (error) {

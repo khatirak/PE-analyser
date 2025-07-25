@@ -58,7 +58,6 @@ router.get('/scorecard/total-revenue', (req, res) => {
       return res.json({ periods: [], current_period: null });
     }
     
-    console.log('✅ Total Revenue Score Card data:', scoreCardData);
     res.json(scoreCardData);
   } catch (error) {
     console.error('❌ Total Revenue Score Card error:', error);
@@ -69,7 +68,6 @@ router.get('/scorecard/total-revenue', (req, res) => {
 router.get('/scorecard/selected-metric', (req, res) => {
   try {
     const { metric, view_type = 'month' } = req.query;    
-    console.log('📊 Selected Metric Score Card request:', { metric, view_type });
     
     if (!metric) {
       return res.status(400).json({ error: 'Metric parameter is required' });
@@ -82,7 +80,6 @@ router.get('/scorecard/selected-metric', (req, res) => {
       return res.json({ periods: [], current_period: null });
     }
     
-    console.log('✅ Selected Metric Score Card data:', scoreCardData);
     res.json(scoreCardData);
   } catch (error) {
     console.error('❌ Selected Metric Score Card error:', error);
