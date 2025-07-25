@@ -28,8 +28,11 @@ app.use(cors({
   credentials: true
 }));
 
-// Ensure upload directory exists
-ensureUploadDirectory();
+// Ensure upload directory exists (skipped in production/serverless)
+const uploadPath = ensureUploadDirectory();
+if (uploadPath) {
+  console.log('📁 Upload directory ready:', uploadPath);
+}
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -71,29 +74,33 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', message: 'Backend is running' });
 });
 
-// Load sample data if available
-const sampleCsvPath = path.join(__dirname, '..', 'backend', 'uploads', 'Cur8_formulaKhatira.csv');
-if (fs.existsSync(sampleCsvPath)) {
-  try {
-    const sampleFile = {
-      stream: fs.createReadStream(sampleCsvPath),
-      originalname: 'Cur8_formulaKhatira.csv'
-    };
-    
-    dataService.loadData(sampleFile)
-      .then(result => {
-        if (result.success) {
-          console.log(`✅ Sample data loaded: ${result.message}`);
-        } else {
-          console.log(`⚠️  Could not load sample data: ${result.message}`);
-        }
-      })
-      .catch(error => {
-        console.log(`⚠️  Error loading sample data: ${error.message}`);
-      });
-  } catch (error) {
-    console.log(`⚠️  Error loading sample data: ${error.message}`);
+// Load sample data if available (skipped in production/serverless)
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  const sampleCsvPath = path.join(__dirname, '..', 'backend', 'uploads', 'Cur8_formulaKhatira.csv');
+  if (fs.existsSync(sampleCsvPath)) {
+    try {
+      const sampleFile = {
+        stream: fs.createReadStream(sampleCsvPath),
+        originalname: 'Cur8_formulaKhatira.csv'
+      };
+      
+      dataService.loadData(sampleFile)
+        .then(result => {
+          if (result.success) {
+            console.log(`✅ Sample data loaded: ${result.message}`);
+          } else {
+            console.log(`⚠️  Could not load sample data: ${result.message}`);
+          }
+        })
+        .catch(error => {
+          console.log(`⚠️  Error loading sample data: ${error.message}`);
+        });
+    } catch (error) {
+      console.log(`⚠️  Error loading sample data: ${error.message}`);
+    }
   }
+} else {
+  console.log('⚠️  Skipping sample data load in production/serverless environment');
 }
 
 // Serve static files for React app (if needed)

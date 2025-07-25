@@ -9,6 +9,11 @@ router.post('/upload', async (req, res) => {
       return res.status(400).json({ error: 'No file part' });
     }
     
+    // Check if we're in a serverless environment
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+      console.log('📤 File upload in production/serverless environment');
+    }
+    
     // Validate file upload
     const validation = validationService.validateFileUpload(req.file);
     if (!validation.isValid) {
@@ -33,7 +38,8 @@ router.post('/upload', async (req, res) => {
     
     res.json({
       message: 'File uploaded successfully',
-      stats: stats
+      stats: stats,
+      note: process.env.NODE_ENV === 'production' ? 'Note: Files are processed in memory and not persisted between deployments' : undefined
     });
     
   } catch (error) {

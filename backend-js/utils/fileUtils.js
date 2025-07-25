@@ -3,13 +3,24 @@ const path = require('path');
 const config = require('../config');
 
 function ensureUploadDirectory() {
-  const uploadPath = path.join(__dirname, '..', config.UPLOAD_FOLDER);
-  
-  if (!fs.existsSync(uploadPath)) {
-    fs.mkdirSync(uploadPath, { recursive: true });
+  // Skip directory creation in serverless environments (like Vercel)
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+    console.log('⚠️  Skipping upload directory creation in production/serverless environment');
+    return null;
   }
   
-  return uploadPath;
+  const uploadPath = path.join(__dirname, '..', config.UPLOAD_FOLDER);
+  
+  try {
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+      console.log('✅ Upload directory created:', uploadPath);
+    }
+    return uploadPath;
+  } catch (error) {
+    console.warn('⚠️  Could not create upload directory:', error.message);
+    return null;
+  }
 }
 
 function getAllowedFileExtension(filename) {
