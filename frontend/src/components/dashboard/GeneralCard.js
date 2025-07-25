@@ -49,47 +49,13 @@ function GeneralCard({ viewType }) {
 
   // Process total revenue data for display
   const totalRevenueCardData = useMemo(() => {
-    if (!totalRevenueData || !totalRevenueData.labels || !totalRevenueData.datasets) {
+    if (!totalRevenueData || !totalRevenueData.periods) {
       console.log('❌ No total revenue data available for processing');
       return null;
     }
 
-    const periods = totalRevenueData.labels.map((label, index) => {
-      // Calculate total revenue for this period (sum of all datasets)
-      const totalRevenue = totalRevenueData.datasets.reduce((sum, dataset) => {
-        return sum + (dataset.data[index] || 0);
-      }, 0);
-
-      // Calculate percentage change from previous period
-      let percentageChange = null;
-      let changeDirection = null;
-      
-      if (index > 0) {
-        const previousTotalRevenue = totalRevenueData.datasets.reduce((sum, dataset) => {
-          return sum + (dataset.data[index - 1] || 0);
-        }, 0);
-        
-        if (previousTotalRevenue > 0) {
-          percentageChange = ((totalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100;
-          changeDirection = percentageChange >= 0 ? 'increase' : 'decrease';
-        }
-      }
-
-      return {
-        period: label,
-        revenue: totalRevenue,
-        percentage_change: percentageChange,
-        change_direction: changeDirection
-      };
-    });
-
-    const currentPeriod = periods.length > 0 ? periods[periods.length - 1].period : null;
-    const totalRevenue = periods.reduce((sum, p) => sum + p.revenue, 0)
-    return {
-      periods,
-      current_period: currentPeriod,
-      total_revenue: totalRevenue
-    };
+    // The backend already provides the processed data, just use it directly
+    return totalRevenueData;
   }, [totalRevenueData]);
 
   // Process selected metric data for display
@@ -274,7 +240,7 @@ function GeneralCard({ viewType }) {
 
   // Format values for display
   const totalRevenueValue = currentTotalRevenueData 
-    ? formatCurrency(currentTotalRevenueData.revenue)
+    ? formatCurrency(currentTotalRevenueData.value)
     : '£0.00';
     
   const selectedMetricValue = currentSelectedMetricData 

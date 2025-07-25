@@ -113,7 +113,7 @@ function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) 
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Cumulative Total Revenue</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(revenueData.periods?.reduce((sum, p) => sum + (p.revenue || 0), 0) || 0)}
+                      {formatCurrency(revenueData.periods?.reduce((sum, p) => sum + (p.value || 0), 0) || 0)}
                     </p>
                   </div>
                 </div>
@@ -158,7 +158,7 @@ function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) 
                               {period.period || 'N/A'}
                             </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {formatCurrency(period.revenue || 0)}
+                              {formatCurrency(period.value || 0)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {period.percentage_change !== null && period.percentage_change !== undefined ? (
