@@ -206,12 +206,10 @@ class DataService {
 
   getTotalRevenueScoreCardData(viewType = 'month') {
     if (!this.currentData) return null;
-    
-    // For total revenue, we want ALL data (all metrics across all pharmacies)
-    // This represents the total revenue across all pharmacies and all metrics
-    const allData = [...this.currentData];
-    // Transform all data into total revenue format (sum everything together)
-    return this._transformToTotalRevenueFormat(allData, viewType);
+    // Filter data to only include the "Total Revenue" metric
+    const totalRevenueData = this.currentData.filter(row => row.Metric === 'Total Revenue');
+    // Transform total revenue data into total format (sum all pharmacies together)
+    return this._transformToTotalRevenueFormat(totalRevenueData, viewType);
   }
 
   getSelectedMetricScoreCardData(metric, viewType = 'month') {
@@ -254,7 +252,7 @@ class DataService {
   _transformToTotalRevenueFormat(data, viewType = 'month') {
     
     if (!data || data.length === 0) {
-      return { labels: [], datasets: [] };
+      return { periods: [], current_period: null };
     }
     
     // Group data by period and sum ALL values for each period
@@ -285,9 +283,9 @@ class DataService {
       groupedData[periodKey] += value;
     });
     
-    // Get sorted period labels based on view type
-    const periodLabels = Object.keys(groupedData);
-    const labels = periodLabels.sort((a, b) => {
+    // Convert to periods array with percentage changes
+    const periods = [];
+    const sortedPeriods = Object.keys(groupedData).sort((a, b) => {
       if (viewType === 'month') {
         // Convert date strings like "Apr-24" to Date objects for proper sorting
         const dateA = this._parseChartDate(a);
@@ -303,30 +301,72 @@ class DataService {
       return a.localeCompare(b);
     });
 
-    // Format labels for display
-    const formattedLabels = labels.map(label => {
+    sortedPeriods.forEach((period, index) => {
+      const value = groupedData[period];
+      let percentageChange = null;
+      let changeDirection = null;
+
+      if (index > 0) {
+        const previousValue = groupedData[sortedPeriods[index - 1]];
+        if (previousValue > 0) {
+          percentageChange = ((value - previousValue) / previousValue) * 100;
+          changeDirection = percentageChange >= 0 ? 'increase' : 'decrease';
+        }
+      }
+
+      // Format period for display
+      let displayPeriod = period;
       if (viewType === 'quarter') {
-        // Convert "2025 Q1" to "Q1 2025" format (removed FY)
-        const parts = label.split(' ');
+        // Convert "2025 Q1" to "Q1 FY25" format
+        const parts = period.split(' ');
         if (parts.length === 2) {
           const year = parts[0];
           const quarter = parts[1];
-          return `${quarter} ${year}`;
+          const shortYear = year.toString().slice(-2);
+          displayPeriod = `${quarter} FY${shortYear}`;
         }
-        return label;
       }
-      return label;
+
+      periods.push({
+        period: displayPeriod,
+        value: value,
+        percentage_change: percentageChange,
+        change_direction: changeDirection
+      });
     });
+
+    // Calculate the actual current period based on current date
+    let actualCurrentPeriod = null;
+    const now = new Date();
     
-    // Create a single dataset with total revenue for each period
-    const datasets = [{
-      label: 'Total Revenue',
-      data: labels.map(period => groupedData[period] || 0)
-    }];
-    
-    const result = { labels: formattedLabels, datasets };
-    
-    return result;
+    if (viewType === 'month') {
+      // Format current month as "MMM-YY" (e.g., "Dec-24")
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = monthNames[now.getMonth()];
+      const year = now.getFullYear().toString().slice(-2);
+      actualCurrentPeriod = `${month}-${year}`;
+    } else if (viewType === 'quarter') {
+      // Calculate current quarter
+      const month = now.getMonth() + 1;
+      let quarter;
+      if (month >= 4 && month <= 6) quarter = 'Q1';
+      else if (month >= 7 && month <= 9) quarter = 'Q2';
+      else if (month >= 10 && month <= 12) quarter = 'Q3';
+      else quarter = 'Q4';
+      
+      // Calculate fiscal year (starts in April)
+      const fiscalYear = month >= 4 ? now.getFullYear() + 1 : now.getFullYear();
+      const shortYear = fiscalYear.toString().slice(-2);
+      actualCurrentPeriod = `${quarter} FY${shortYear}`;
+    } else if (viewType === 'fiscal_year') {
+      // Calculate current fiscal year
+      const month = now.getMonth() + 1;
+      const fiscalYear = month >= 4 ? now.getFullYear() + 1 : now.getFullYear();
+      actualCurrentPeriod = fiscalYear.toString();
+    }
+
+    return { periods, current_period: actualCurrentPeriod };
   }
 
   _transformToChartFormat(data, pharmacies, viewType = 'month') {
