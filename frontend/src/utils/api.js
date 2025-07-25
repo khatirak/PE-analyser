@@ -35,8 +35,7 @@ api.interceptors.response.use(
 export const testFetchConnection = async () => {
   try {
     const testUrl = process.env.NODE_ENV === 'production' ? '/stats' : `${API_CONFIG.BASE_URL}/stats`;
-    const response = await fetch(testUrl);
-    const data = await response.json();
+    await fetch(testUrl);
     return true;
   } catch (error) {
     console.error('Fetch test failed:', error);

@@ -53,9 +53,7 @@ export const useChartData = () => {
     state.acquisitionDate, 
     state.dateRange, 
     state.quarterRange, 
-    state.fiscalYearRange,
-    state.pharmacies?.length,
-    state.stats
+    state.fiscalYearRange
   ]);
 
   const loadChartData = useCallback(async (params) => {

@@ -40,8 +40,8 @@ function Header() {
     try {
       
       // Upload the file
-      const result = await uploadFile(file);
-     
+      await uploadFile(file);
+      
       // Fetch updated stats
       const stats = await fetchStats();
       dispatch({ type: 'SET_STATS', payload: stats });

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
-import { fetchSelectedMetricData, fetchSelectedMetricScoreCardData } from '../../utils/api';
+import { fetchSelectedMetricScoreCardData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
 
 function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: passedMetricData }) {

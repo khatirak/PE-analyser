@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
-import { fetchTotalRevenueData, fetchTotalRevenueScoreCardData } from '../../utils/api';
+import { fetchTotalRevenueScoreCardData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
 
 function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) {
