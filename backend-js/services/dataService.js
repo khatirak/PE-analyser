@@ -203,6 +203,48 @@ class DataService {
     // Transform data into chart format based on view type
     return this._transformToChartFormat(chartData, pharmacies, viewType);
   }
+
+  getScoreCardData(viewType = 'month') {
+    if (!this.currentData) return null;
+    
+    console.log('🔍 getScoreCardData - View type:', viewType);
+    console.log('🔍 getScoreCardData - Initial data length:', this.currentData.length);
+    
+    // Use all data without any filters except view type
+    const chartData = [...this.currentData];
+    
+    // Transform data into chart format based on view type only
+    return this._transformToChartFormat(chartData, null, viewType);
+  }
+
+  getTotalRevenueScoreCardData(viewType = 'month') {
+    if (!this.currentData) return null;
+    
+    console.log('🔍 getTotalRevenueScoreCardData - View type:', viewType);
+    
+    // For total revenue, we want ALL data (all metrics across all pharmacies)
+    // This represents the total revenue across all pharmacies and all metrics
+    const allData = [...this.currentData];
+    
+    console.log('🔍 Total revenue data length (all data):', allData.length);
+    
+    // Transform all data into total revenue format (sum everything together)
+    return this._transformToTotalRevenueFormat(allData, viewType);
+  }
+
+  getSelectedMetricScoreCardData(metric, viewType = 'month') {
+    if (!this.currentData) return null;
+    
+    console.log('🔍 getSelectedMetricScoreCardData - Metric:', metric, 'View type:', viewType);
+    
+    // Filter data to only include the selected metric
+    const metricData = this.currentData.filter(row => row.Metric === metric);
+    
+    console.log('🔍 Metric data length:', metricData.length);
+    
+    // Transform metric data into total format (sum everything together)
+    return this._transformToTotalRevenueFormat(metricData, viewType);
+  }
   
   _applyAcquisitionFilter(revenueData, acquisitionDates) {
     if (!acquisitionDates) return revenueData;
@@ -232,6 +274,96 @@ class DataService {
     });
   }
   
+  _transformToTotalRevenueFormat(data, viewType = 'month') {
+    console.log('🔍 Transforming total revenue data:', { dataLength: data?.length, viewType });
+    
+    if (!data || data.length === 0) {
+      console.log('❌ No data to transform');
+      return { labels: [], datasets: [] };
+    }
+    
+    // Log first few rows to see structure
+    console.log('📊 Sample data rows:', data.slice(0, 3));
+    
+    // Group data by period and sum ALL values for each period
+    const groupedData = {};
+    
+    data.forEach(row => {
+      let periodKey;
+      
+      if (viewType === 'month') {
+        periodKey = row.Date; // Use Date column for monthly view
+      } else if (viewType === 'quarter') {
+        // Combine Quarter and Fiscal_Year for quarterly view
+        const quarter = row.Quarter;
+        const fiscalYear = row.Fiscal_Year;
+        periodKey = `${fiscalYear} ${quarter}`; // Format: "2025 Q1"
+      } else if (viewType === 'fiscal_year') {
+        periodKey = row.Fiscal_Year; // Use Fiscal_Year column for fiscal year view
+      } else {
+        periodKey = row.Date; // Default to monthly
+      }
+      
+      const value = parseFloat(row.Value) || 0;
+      
+      if (!groupedData[periodKey]) {
+        groupedData[periodKey] = 0;
+      }
+      
+      groupedData[periodKey] += value;
+    });
+    
+    // Get sorted period labels based on view type
+    const periodLabels = Object.keys(groupedData);
+    const labels = periodLabels.sort((a, b) => {
+      if (viewType === 'month') {
+        // Convert date strings like "Apr-24" to Date objects for proper sorting
+        const dateA = this._parseChartDate(a);
+        const dateB = this._parseChartDate(b);
+        return dateA - dateB;
+      } else if (viewType === 'quarter') {
+        // Sort quarters chronologically (e.g., "2025 Q1", "2025 Q2")
+        return this._parseQuarter(a) - this._parseQuarter(b);
+      } else if (viewType === 'fiscal_year') {
+        // Sort fiscal years numerically
+        return parseInt(a) - parseInt(b);
+      }
+      return a.localeCompare(b);
+    });
+
+    // Format labels for display
+    const formattedLabels = labels.map(label => {
+      if (viewType === 'quarter') {
+        // Convert "2025 Q1" to "Q1 2025" format (removed FY)
+        const parts = label.split(' ');
+        if (parts.length === 2) {
+          const year = parts[0];
+          const quarter = parts[1];
+          return `${quarter} ${year}`;
+        }
+        return label;
+      }
+      return label;
+    });
+    
+    // Create a single dataset with total revenue for each period
+    const datasets = [{
+      label: 'Total Revenue',
+      data: labels.map(period => groupedData[period] || 0)
+    }];
+    
+    const result = { labels: formattedLabels, datasets };
+    console.log('✅ Transformed total revenue data:', { 
+      viewType,
+      labelsCount: formattedLabels.length, 
+      datasetsCount: datasets.length,
+      sampleLabels: formattedLabels.slice(0, 5),
+      sampleData: datasets[0].data.slice(0, 5)
+    });
+    
+    return result;
+  }
+
   _transformToChartFormat(data, pharmacies, viewType = 'month') {
     console.log('🔍 Transforming chart data:', { dataLength: data?.length, pharmacies, viewType });
     

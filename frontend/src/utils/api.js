@@ -147,6 +147,30 @@ export const fetchTotalRevenueData = async (params) => {
   }
 };
 
+export const fetchTotalRevenueScoreCardData = async (viewType) => {
+  try {
+    const response = await api.get(API_CONFIG.ENDPOINTS.TOTAL_REVENUE_SCORECARD, { 
+      params: { view_type: viewType } 
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching total revenue score card data:', error);
+    throw error;
+  }
+};
+
+export const fetchSelectedMetricScoreCardData = async (metric, viewType) => {
+  try {
+    const response = await api.get(API_CONFIG.ENDPOINTS.SELECTED_METRIC_SCORECARD, { 
+      params: { metric, view_type: viewType } 
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching selected metric score card data:', error);
+    throw error;
+  }
+};
+
 export const fetchSelectedMetricData = async (params) => {
   try {
     const response = await api.get(API_CONFIG.ENDPOINTS.SELECTED_METRIC_DATA, { params });

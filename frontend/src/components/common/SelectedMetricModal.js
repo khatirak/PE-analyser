@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
-import { fetchSelectedMetricData } from '../../utils/api';
+import { fetchSelectedMetricData, fetchSelectedMetricScoreCardData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
 
 function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: passedMetricData }) {
@@ -13,36 +13,8 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: pass
     setLoading(true);
     setError(null);
     try {
-      const params = {
-        view_type: state.viewType,
-        metric: selectedMetric
-      };
-      
-      // Add range parameters based on view type
-      if (state.viewType === 'month') {
-        if (state.dateRange.start) {
-          params.date_range_start = state.dateRange.start;
-        }
-        if (state.dateRange.end) {
-          params.date_range_end = state.dateRange.end;
-        }
-      } else if (state.viewType === 'quarter') {
-        if (state.quarterRange.start) {
-          params.quarter_range_start = state.quarterRange.start;
-        }
-        if (state.quarterRange.end) {
-          params.quarter_range_end = state.quarterRange.end;
-        }
-      } else if (state.viewType === 'fiscal_year') {
-        if (state.fiscalYearRange.start) {
-          params.fiscal_year_range_start = state.fiscalYearRange.start;
-        }
-        if (state.fiscalYearRange.end) {
-          params.fiscal_year_range_end = state.fiscalYearRange.end;
-        }
-      }
-      
-      const data = await fetchSelectedMetricData(params);
+      // Use the new unfiltered score card data method
+      const data = await fetchSelectedMetricScoreCardData(selectedMetric, state.viewType);
       setMetricData(data);
     } catch (error) {
       console.error('Error loading selected metric data:', error);
@@ -50,7 +22,7 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: pass
     } finally {
       setLoading(false);
     }
-  }, [selectedMetric, state.viewType, state.dateRange, state.quarterRange, state.fiscalYearRange]);
+  }, [selectedMetric, state.viewType]);
 
   useEffect(() => {
     if (isOpen && selectedMetric) {
@@ -148,7 +120,7 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: pass
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Cumulative Total {selectedMetric}</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatValue(metricData.periods?.reduce((sum, p) => sum + p.selectedMetricValue, 0) || 0, selectedMetric)}
+                      {formatValue(metricData.periods?.reduce((sum, p) => sum + p.value, 0) || 0, selectedMetric)}
                     </p>
                   </div>
                 </div>
@@ -186,7 +158,7 @@ function SelectedMetricModal({ isOpen, onClose, selectedMetric, metricData: pass
                             {period.period}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatValue(period.selectedMetricValue, selectedMetric)}
+                            {formatValue(period.value, selectedMetric)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {period.percentage_change !== null ? (

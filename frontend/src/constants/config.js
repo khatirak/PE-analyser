@@ -12,7 +12,9 @@ export const API_CONFIG = {
     TOTAL_REVENUE_DATA: '/revenue',
     SELECTED_METRIC_DATA: '/chart',
     MONTHLY_REVENUE: '/revenue',
-    CHART_DATA: '/chart'
+    CHART_DATA: '/chart',
+    TOTAL_REVENUE_SCORECARD: '/scorecard/total-revenue',
+    SELECTED_METRIC_SCORECARD: '/scorecard/selected-metric'
   }
 };
 

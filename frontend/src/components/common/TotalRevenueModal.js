@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
-import { fetchTotalRevenueData } from '../../utils/api';
+import { fetchTotalRevenueData, fetchTotalRevenueScoreCardData } from '../../utils/api';
 import { useDataContext } from '../../context/DataContext';
 
 function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) {
@@ -13,37 +13,10 @@ function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) 
     setLoading(true);
     setError(null);
     try {
-      const params = {
-        view_type: state.viewType
-      };
-      
-      // Add range parameters based on view type
-      if (state.viewType === 'month') {
-        if (state.dateRange.start) {
-          params.date_range_start = state.dateRange.start;
-        }
-        if (state.dateRange.end) {
-          params.date_range_end = state.dateRange.end;
-        }
-      } else if (state.viewType === 'quarter') {
-        if (state.quarterRange.start) {
-          params.quarter_range_start = state.quarterRange.start;
-        }
-        if (state.quarterRange.end) {
-          params.quarter_range_end = state.quarterRange.end;
-        }
-      } else if (state.viewType === 'fiscal_year') {
-        if (state.fiscalYearRange.start) {
-          params.fiscal_year_range_start = state.fiscalYearRange.start;
-        }
-        if (state.fiscalYearRange.end) {
-          params.fiscal_year_range_end = state.fiscalYearRange.end;
-        }
-      }
-      
-      console.log('🔍 Loading total revenue data with params:', params);
-      const data = await fetchTotalRevenueData(params);
-      console.log('✅ Total revenue data loaded:', data);
+      // Use the new unfiltered score card data method
+      console.log('🔍 Loading total revenue score card data for view type:', state.viewType);
+      const data = await fetchTotalRevenueScoreCardData(state.viewType);
+      console.log('✅ Total revenue score card data loaded:', data);
       console.log('📊 Revenue data structure check:', {
         hasData: !!data,
         hasPeriods: !!data?.periods,
@@ -58,7 +31,7 @@ function TotalRevenueModal({ isOpen, onClose, revenueData: passedRevenueData }) 
     } finally {
       setLoading(false);
     }
-  }, [state.viewType, state.dateRange, state.quarterRange, state.fiscalYearRange]);
+  }, [state.viewType]);
 
   useEffect(() => {
     if (isOpen) {
